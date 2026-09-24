@@ -1,21 +1,15 @@
 {
-  "name": "Test Flow",
-  "goal": "Say hello to the user",
+  "name": "Greeting flow",
+  "goal": "Greet a person after their name is available.",
   "stages": [
     {
-      "name": "get_name",
-      "prompt": "Read the user's name from /tmp/my_name.txt and return it. If the file does not exist, wait.",
-      "state": "finished",
-      "output": "Leonid",
-      "message": null
+      "name": "get-name",
+      "prompt": "Obtain the user's name and return it as plain text. Pause only if an answer from the user is required."
     },
     {
-      "name": "say_hello",
-      "prompt": "Say hello to the name in the input.",
-      "depends_on": ["get_name"],
-      "state": "finished",
-      "output": "hello Leonid",
-      "message": null
+      "name": "say-hello",
+      "prompt": "Write a greeting using the name in the input.",
+      "depends_on": ["get-name"]
     }
   ]
 }

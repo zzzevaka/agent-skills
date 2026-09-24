@@ -1,8 +1,0 @@
-name: test
-goal: Hello
-stages:
-  - name: stage1
-    prompt: Say hello.
-    state: pending
-    output: null
-    message: null

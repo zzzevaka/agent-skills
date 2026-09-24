@@ -19,6 +19,10 @@ from lib.exceptions import ValidationError
 from lib.models import StageState
 from lib.repositories import FlowRepository, _get_storage
 
+REFERENCE_DIRECTORY = (
+    Path(__file__).resolve().parents[3] / "skills" / "durable-flow" / "references"
+)
+
 
 def flow_data():
     return {
@@ -104,3 +108,18 @@ class FlowRepositoryTests(unittest.TestCase):
 
         self.assertEqual(reloaded.revision, 1)
         self.assertEqual(reloaded.stages[0].state, StageState.INPROGRESS)
+
+
+class ReferenceFlowTests(unittest.TestCase):
+    def test_json_starter_flow_loads_with_default_runtime_state(self):
+        flow = FlowRepository(REFERENCE_DIRECTORY / "example.json").get_flow()
+
+        self.assertEqual(flow.revision, 0)
+        self.assertTrue(all(stage.state is StageState.PENDING for stage in flow.stages))
+
+    @unittest.skipUnless(importlib.util.find_spec("yaml"), "PyYAML is not installed")
+    def test_yaml_starter_flow_loads_with_default_runtime_state(self):
+        flow = FlowRepository(REFERENCE_DIRECTORY / "example.yaml").get_flow()
+
+        self.assertEqual(flow.revision, 0)
+        self.assertTrue(all(stage.state is StageState.PENDING for stage in flow.stages))

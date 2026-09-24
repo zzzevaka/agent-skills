@@ -1,22 +1,38 @@
 ---
 name: durable-flow
-description: Run and resume persistent multi-stage workflows stored in JSON or YAML flow files. Use when asked to execute, continue, or manage a durable flow.
+description: Create, run, and resume persistent sequential multi-stage workflows stored in JSON or YAML flow files.
 ---
 
 # Skill durable-flow
 
 ## Reference flow files
 
-When the user asks for a sample or needs a starting point, consult the examples
-in [`references/`](references/): [`example.json`](references/example.json),
-[`example.yaml`](references/example.yaml), and [`test.yaml`](references/test.yaml).
-Treat these as templates, not as the user's flow state.
+When the user needs a new flow or an example, consult the relevant reference:
 
-## Requirements
+- [`example.json`](references/example.json) is a compact, unstructured starter.
+- [`example.yaml`](references/example.yaml) is a multi-stage starter with structured outputs.
+- [`lifecycle.md`](references/lifecycle.md) shows a complete start, save, pause,
+  resume, validation, and completion sequence.
 
-The user must provide the path to the flow state file. A flow is a repeatable,
-multi-stage workflow whose progress and intermediate results persist across
-pauses.
+Treat these as templates or documentation, not as the user's flow state.
+
+## Create or select a flow file
+
+A flow is a repeatable, multi-stage workflow whose progress and intermediate
+results persist across pauses.
+
+- If the user supplies a flow path, use that file.
+- If the user asks to create a flow, adapt the appropriate reference file and
+  save it at a task-scoped path supplied by the user or already established by
+  the task. If there is no suitable location, ask where to create it.
+- An initial flow must define `name`, `goal`, and `stages`; add `schemas` only
+  when a stage needs structured output. Omit `state`, `output`, `message`, and
+  `revision` from a new flow: they default to `pending`, `null`, `null`, and
+  `0`.
+
+Directly copy and edit a reference only while creating the initial flow file.
+After the file exists, use the state-management script for every state read or
+transition.
 
 Resolve `scripts/state_management.py` relative to this `SKILL.md` directory,
 not relative to the agent's current working directory. Use the resolved path
@@ -24,8 +40,8 @@ when running the commands below.
 
 ## Constraints
 
-- Use `scripts/state_management.py` for every state read or transition. Do not
-  read or edit the flow file directly.
+- After initialization, use `scripts/state_management.py` for every state read
+  or transition. Do not read or edit the flow file directly.
 - Run the script as documented; do not inspect or modify its implementation.
 
 ## Flow model
@@ -107,6 +123,18 @@ Use this to persist useful progress before pausing or while work continues.
 Saving output does not validate it. The stage's output is shown again by
 `get_flow` when the stage resumes.
 
+### Decide whether to pause
+
+Keep a stage `inprogress` while there is useful work that can be completed
+without outside input. Pause it only when forward progress depends on a
+specific external condition, such as a user answer or approval, restored
+access, an unavailable resource, or a future result.
+
+Before pausing, save useful partial work with `set_output`. The pause message
+must state both what is awaited and what will allow the stage to resume. For
+example: `Waiting for the transcript export; resume when the export is
+available.`
+
 ### Finish the current stage
 
 Either provide the final output directly:
@@ -126,10 +154,9 @@ default). If it is invalid, the stage remains in progress so the output can be
 corrected and submitted again. Only a successfully finished stage makes its
 output available to dependent stages.
 
-### Fail or pause the current stage
+### Pause the current stage
 
 ```bash
-scripts/state_management.py fail_stage -p "path/to/the/flow.json" -r 7 -m 'failure reason'
 scripts/state_management.py pause_stage -p "path/to/the/flow.json" -r 7 -m 'waiting reason'
 ```
 
@@ -140,12 +167,21 @@ dependencies. Resume a waiting stage with:
 scripts/state_management.py resume_stage -p "path/to/the/flow.json" -r 7 -m 'resume reason'
 ```
 
+### Record a failure
+
+```bash
+scripts/state_management.py fail_stage -p "path/to/the/flow.json" -r 7 -m 'failure reason'
+```
+
+Failure recovery belongs to manual mode. Do not automatically retry, restart,
+or alter a failed flow from this skill.
+
 ## Guidelines
 
 - Execute stages sequentially; parallel execution is not supported.
 - If every stage is complete, say so and stop.
-- Use the scripts for every state transition; do not edit the flow file or read
-  the implementation scripts directly.
+- After initialization, use the scripts for every state transition; do not edit
+  the flow file or read the implementation scripts directly.
 - Each stage must have a detailed prompt. Use `depends_on` only for outputs
   from preceding stages; the overall goal is already available in `get_flow`.
 - If output validation fails, correct the output and retry `finish_stage`.
