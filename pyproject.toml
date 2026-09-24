@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "durable-flow"
+version = "0.1.0"
+description = "An Agent Skills skill for durable multi-stage workflows"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">3.7,<4.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.16.8"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["skills/durable-flow/scripts", "tests/skills/durable-flow"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

@@ -1,0 +1,28 @@
+name: spanish-review
+goal: |
+  After each Spanish lesson, prepare review materials covering grammar and new
+  vocabulary.
+schemas:
+  lesson-list:
+    type: array
+    items:
+      type: object
+      properties:
+        lesson_date:
+          type: str
+        start_row:
+          type: int
+        end_row:
+          type: int
+        media_file_id:
+          type: str
+stages:
+  - name: find-last-lesson
+    prompt: Find the most recently processed lesson and return its date and document.
+  - name: find-new-lessons
+    prompt: Find new lessons after the date provided in the input.
+    depends_on: [find-last-lesson]
+    output_schema: lesson-list
+  - name: create-review-documents
+    prompt: Create review materials for each lesson in the input.
+    depends_on: [find-new-lessons]

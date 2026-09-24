@@ -1,0 +1,22 @@
+{
+  "name": "durable-flow-marketplace",
+  "interface": {
+    "displayName": "Agent Skills"
+  },
+  "plugins": [
+    {
+      "name": "durable-flow",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "description": "A collection of reusable Agent Skills for AI coding assistants.",
+      "version": "0.1.0",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

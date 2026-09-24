@@ -1,0 +1,19 @@
+{
+  "name": "durable-flow-marketplace",
+  "metadata": {
+    "description": "A marketplace of reusable Agent Skills maintained in this repository.",
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "Leonid Maksimov"
+  },
+  "plugins": [
+    {
+      "name": "durable-flow",
+      "source": "./",
+      "description": "A collection of reusable Agent Skills for AI coding assistants.",
+      "version": "0.1.0",
+      "skills": ["./skills"]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "durable-flow",
+  "version": "0.1.0",
+  "description": "A collection of reusable Agent Skills for AI coding assistants.",
+  "author": {
+    "name": "Leonid Maksimov"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Skills",
+    "shortDescription": "A collection of reusable skills for AI coding assistants.",
+    "longDescription": "Browse and install reusable Agent Skills maintained in this repository.",
+    "developerName": "Leonid Maksimov",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["Help me run or resume a durable flow."]
+  }
+}
