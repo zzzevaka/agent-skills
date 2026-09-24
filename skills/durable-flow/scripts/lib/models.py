@@ -46,6 +46,8 @@ class Flow(FlowConfig):
     def validate_invariants(self) -> None:
         if type(self.revision) is not int or self.revision < 0:
             raise ValidationError("flow revision must be a non-negative integer")
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValidationError("flow name must be a non-empty string")
         if not isinstance(self.goal, str):
             raise ValidationError("flow goal must be a string")
         if not self.stages:
@@ -58,8 +60,18 @@ class Flow(FlowConfig):
 
         seen: set[str] = set()
         for stage in self.stages:
-            if not stage.name:
-                raise ValidationError("stage names must be non-empty")
+            if not isinstance(stage.name, str) or not stage.name.strip():
+                raise ValidationError("stage names must be non-empty strings")
+            if not isinstance(stage.prompt, str):
+                raise ValidationError(f"stage {stage.name!r} prompt must be a string")
+            if not isinstance(stage.depends_on, tuple) or not all(
+                isinstance(dependency, str) for dependency in stage.depends_on
+            ):
+                raise ValidationError(f"stage {stage.name!r} dependencies must be names")
+            if stage.output_schema is not None and not isinstance(stage.output_schema, str):
+                raise ValidationError(f"stage {stage.name!r} output_schema must be a string")
+            if not isinstance(stage.state, StageState):
+                raise ValidationError(f"stage {stage.name!r} has an invalid state")
             if stage.name in seen:
                 raise ValidationError(f"stage {stage.name!r} is duplicated")
             if len(set(stage.depends_on)) != len(stage.depends_on):
@@ -160,61 +172,6 @@ class Flow(FlowConfig):
     def resume_stage(self, *, message: str, revision: int) -> Self:
         return self._update_stage(
             StageState.WAITING, revision=revision, state=StageState.INPROGRESS, message=message
-        )
-
-    def rename(self, *, name: str, revision: int) -> Self:
-        self._check_revision(revision)
-        return replace(self, name=name, revision=revision + 1)
-
-    def add_stage(
-        self,
-        *,
-        name: str,
-        prompt: str,
-        depends_on: tuple[str, ...] = (),
-        output_schema: str | None = None,
-        revision: int,
-    ) -> Self:
-        self._check_revision(revision)
-        if any(stage.name == name for stage in self.stages):
-            raise ValidationError(f"stage {name!r} already exists")
-        stage = Stage(
-            name=name,
-            prompt=prompt,
-            depends_on=depends_on,
-            output_schema=output_schema,
-            state=StageState.PENDING,
-        )
-        updated = replace(self, stages=self.stages + (stage,))
-        updated.validate_invariants()
-        return replace(updated, revision=revision + 1)
-
-    def delete_stage(self, *, name: str, revision: int) -> Self:
-        self._check_revision(revision)
-        stage = self._get_stage_by_name(name)
-        if stage.state in (StageState.INPROGRESS, StageState.WAITING):
-            raise ValidationError(f"stage {name!r} is {stage.state.value} and cannot be deleted")
-        dependents = [other.name for other in self.stages if name in other.depends_on]
-        if dependents:
-            raise ValidationError(
-                f"stage {name!r} is a dependency of: {', '.join(dependents)}"
-            )
-        return replace(
-            self,
-            stages=tuple(other for other in self.stages if other is not stage),
-            revision=revision + 1,
-        )
-
-    def reset(self, *, revision: int) -> Self:
-        """Return a copy of the flow with every stage back in the pending state."""
-        self._check_revision(revision)
-        return replace(
-            self,
-            stages=tuple(
-                replace(stage, state=StageState.PENDING, message=None, output=None)
-                for stage in self.stages
-            ),
-            revision=revision + 1,
         )
 
     def _output_schema(self, stage: Stage) -> SchemaDef:

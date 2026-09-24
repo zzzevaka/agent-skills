@@ -34,6 +34,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    try:
+        _main()
+    except OSError as err:
+        fail(f"Filesystem error: {err}")
+
+
+def _main() -> None:
     args = parse_args()
 
     repository = open_repository(Path(args.path))
@@ -45,7 +52,7 @@ def main() -> None:
     if args.revision is None:
         fail(f"-r/--revision is required for the {args.command} command")
 
-    params: dict[str, str] = {}
+    params: dict[str, object] = {}
     if args.command == Commands.SET_OUTPUT:
         if args.message is None:
             fail(f"-m/--message is required for the {args.command} command")
@@ -56,11 +63,18 @@ def main() -> None:
         params = {"message": args.message}
     elif args.command == Commands.FINISH_STAGE and args.message is not None:
         params = {"output": args.message}
-
     try:
+        operation = {
+            Commands.START_NEXT_STAGE: "start_next_stage",
+            Commands.SET_OUTPUT: "set_output",
+            Commands.FINISH_STAGE: "finish_stage",
+            Commands.FAIL_STAGE: "fail_stage",
+            Commands.PAUSE_STAGE: "pause_stage",
+            Commands.RESUME_STAGE: "resume_stage",
+        }[args.command]
         flow = repository.mutate(
             args.revision,
-            lambda current: getattr(current, args.command)(revision=args.revision, **params),
+            lambda current: getattr(current, operation)(revision=args.revision, **params),
         )
     except ValidationError as err:
         fail(f"Validation error: {err}")

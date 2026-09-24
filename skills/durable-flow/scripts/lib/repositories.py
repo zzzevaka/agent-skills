@@ -61,6 +61,8 @@ class _JSONStorage(_Storage):
                 return json.load(fp)
         except json.JSONDecodeError as err:
             raise ValidationError(f"invalid JSON: {err}")
+        except UnicodeError as err:
+            raise ValidationError(f"flow file is not valid UTF-8: {err}")
 
     def write(self, value: _Serialised, path: Path) -> None:
         with open(path, 'w') as fp:
@@ -94,6 +96,8 @@ class _YAMLStorage(_Storage):
                 return yaml.safe_load(fp)
         except yaml.YAMLError as err:
             raise ValidationError(f"invalid YAML: {err}")
+        except UnicodeError as err:
+            raise ValidationError(f"flow file is not valid UTF-8: {err}")
 
     def write(self, value: _Serialised, path: Path) -> None:
         yaml = self._yaml()
