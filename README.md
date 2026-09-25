@@ -1,5 +1,10 @@
 # Agent Skills
 
+## Skills
+
+- [durable-flow](docs/durable-flow/README.md) — create, run, and resume
+  persistent multi-stage workflows stored in JSON or YAML flow files.
+
 ## Development
 
 Run the unit tests with:

@@ -284,28 +284,51 @@
   }
   legend.append(el("span", {}, `${counts.finished} / ${stages.length} done`));
 
-  // Layout: a stage's row is the longest dependency path leading to it. Within
-  // a row, stages are ordered by the mean position of their dependencies to
-  // reduce edge crossings; ties keep the execution order.
+  // Layout: a stage's row is the longest dependency path leading to it. An
+  // edge that spans several rows gets a narrow waypoint in every row it
+  // crosses, so it runs beside the stages in between instead of behind them.
+  // Within a row, stages and waypoints are ordered by the mean position of
+  // their predecessors to reduce edge crossings; ties keep the execution
+  // order, with waypoints after stages.
+  const WAYPOINT_W = 16;
   stages.forEach(s => { s.layer = Math.max(-1, ...s.depends_on.map(d => byName.get(d).layer)) + 1; });
   const rows = [];
-  stages.forEach(s => (rows[s.layer] ??= []).push(s));
-  const maxCols = Math.max(...rows.map(r => r.length));
-  const center = s => s.depends_on.length
-    ? s.depends_on.reduce((sum, d) => sum + byName.get(d).x, 0) / s.depends_on.length
-    : s.index;
+  stages.forEach(s => {
+    Object.assign(s, { w: NODE_W, preds: [] });
+    (rows[s.layer] ??= []).push(s);
+  });
+  const edges = stages.flatMap(s => s.depends_on.map(d => {
+    const hops = [byName.get(d)];
+    for (let layer = hops[0].layer + 1; layer < s.layer; layer++) {
+      const waypoint = { waypoint: true, index: s.index, w: WAYPOINT_W, preds: [hops.at(-1)] };
+      rows[layer].push(waypoint);
+      hops.push(waypoint);
+    }
+    s.preds.push(hops.at(-1));
+    hops.push(s);
+    return { from: d, to: s.name, hops };
+  }));
+
+  const cx = n => n.x + n.w / 2;
+  const center = n => n.preds.length
+    ? n.preds.reduce((sum, p) => sum + cx(p), 0) / n.preds.length
+    : n.index;
+  const rowWidth = row => row.reduce((sum, n) => sum + n.w, 0) + (row.length - 1) * GAP_X;
+  const graphWidth = Math.max(...rows.map(rowWidth));
   rows.forEach((row, y) => {
-    row.sort((a, b) => center(a) - center(b) || a.index - b.index);
-    const offset = (maxCols - row.length) * (NODE_W + GAP_X) / 2;
-    row.forEach((s, x) => {
-      s.x = PAD + offset + x * (NODE_W + GAP_X);
-      s.y = PAD + y * (NODE_H + GAP_Y);
-    });
+    row.sort((a, b) =>
+      center(a) - center(b) || Number(!!a.waypoint) - Number(!!b.waypoint) || a.index - b.index);
+    let x = PAD + (graphWidth - rowWidth(row)) / 2;
+    for (const n of row) {
+      n.x = x;
+      n.y = PAD + y * (NODE_H + GAP_Y);
+      x += n.w + GAP_X;
+    }
   });
 
   const graph = document.getElementById("graph");
   const svg = document.getElementById("edges");
-  const width = PAD * 2 + maxCols * NODE_W + (maxCols - 1) * GAP_X;
+  const width = PAD * 2 + graphWidth;
   const height = PAD * 2 + rows.length * NODE_H + (rows.length - 1) * GAP_Y;
   graph.style.width = `${width}px`;
   graph.style.height = `${height}px`;
@@ -313,29 +336,40 @@
   svg.setAttribute("width", width);
   svg.setAttribute("height", height);
 
-  // Spread several edges along the node's edge, ordered to avoid crossings.
-  const port = (node, others, other) => {
-    const sorted = [...others].sort((a, b) => byName.get(a).x - byName.get(b).x);
-    return node.x + NODE_W / 2 + (sorted.indexOf(other) - (sorted.length - 1) / 2) * 18;
+  // Spread several edges along a stage's edge, in the order of their
+  // neighbouring hops so that they do not cross.
+  const spread = (list, neighbour, assign) => {
+    list.sort((a, b) => cx(neighbour(a)) - cx(neighbour(b)));
+    list.forEach((e, i) => assign(e, (i - (list.length - 1) / 2) * 18));
   };
-  const edges = [];
   for (const s of stages) {
-    for (const d of s.depends_on) {
-      const src = byName.get(d);
-      const x1 = port(src, src.dependents, s.name), y1 = src.y + NODE_H;
-      const x2 = port(s, s.depends_on, d), y2 = s.y - 3;
-      const stub = 10, top = y1 + stub, bottom = y2 - stub;
-      const dy = Math.max(16, (bottom - top) / 2);
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      // Straight stubs keep both ends vertical, so a downward chevron drawn
-      // with the same stroke lines up with the edge and shares its colour.
-      path.setAttribute("d",
-        `M${x1},${y1} L${x1},${top} C${x1},${top + dy} ${x2},${bottom - dy} ${x2},${bottom} L${x2},${y2}` +
-        ` M${x2 - 4},${y2 - 5} L${x2},${y2} L${x2 + 4},${y2 - 5}`);
-      if (src.state === "finished") path.classList.add("done");
-      svg.append(path);
-      edges.push({ from: d, to: s.name, path });
+    spread(edges.filter(e => e.hops[0] === s), e => e.hops[1], (e, dx) => { e.x1 = cx(s) + dx; });
+    spread(edges.filter(e => e.hops.at(-1) === s), e => e.hops.at(-2), (e, dx) => { e.x2 = cx(s) + dx; });
+  }
+
+  // Each hop between rows is a curve with straight stubs at both ends, so a
+  // downward chevron drawn with the same stroke lines up with the edge and
+  // shares its colour. Through a waypoint the edge runs straight down.
+  const hop = (x1, y1, x2, y2) => {
+    const stub = 10, top = y1 + stub, bottom = y2 - stub;
+    const dy = Math.max(16, (bottom - top) / 2);
+    return ` L${x1},${top} C${x1},${top + dy} ${x2},${bottom - dy} ${x2},${bottom} L${x2},${y2}`;
+  };
+  for (const e of edges) {
+    const src = e.hops[0], dst = e.hops.at(-1);
+    let x = e.x1, y = src.y + NODE_H, d = `M${x},${y}`;
+    for (const waypoint of e.hops.slice(1, -1)) {
+      d += hop(x, y, cx(waypoint), waypoint.y);
+      x = cx(waypoint);
+      y = waypoint.y + NODE_H;
+      d += ` L${x},${y}`;
     }
+    const x2 = e.x2, y2 = dst.y - 3;
+    d += hop(x, y, x2, y2) + ` M${x2 - 4},${y2 - 5} L${x2},${y2} L${x2 + 4},${y2 - 5}`;
+    e.path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    e.path.setAttribute("d", d);
+    if (src.state === "finished") e.path.classList.add("done");
+    svg.append(e.path);
   }
 
   for (const s of stages) {
