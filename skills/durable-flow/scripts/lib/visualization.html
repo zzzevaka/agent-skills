@@ -249,7 +249,7 @@
   const flow = JSON.parse(document.getElementById("flow-data").textContent);
   const STATES = ["finished", "inprogress", "waiting", "pending", "failed"];
   const LABELS = { pending: "Pending", inprogress: "In progress", waiting: "Waiting", finished: "Finished", failed: "Failed" };
-  const NODE_W = 196, NODE_H = 64, GAP_X = 20, GAP_Y = 44, PAD = 32;
+  const MIN_NODE_W = 196, MAX_NODE_W = 360, NODE_H = 64, GAP_X = 20, GAP_Y = 44, PAD = 32;
 
   const stages = flow.stages.map((s, i) => ({ ...s, index: i, dependents: [] }));
   const byName = new Map(stages.map(s => [s.name, s]));
@@ -283,6 +283,18 @@
     legend.append(el("span", {}, dot(st), LABELS[st], el("b", {}, String(counts[st]))));
   }
   legend.append(el("span", {}, `${counts.finished} / ${stages.length} done`));
+
+  // All stages share one width: enough for the longest name, within limits.
+  const graph = document.getElementById("graph");
+  const probeName = el("span", { class: "node-name" });
+  const probe = el("button", { class: "node", style: "visibility:hidden;width:max-content" },
+    el("div", { class: "node-top" }, el("span", { class: "order" }, "00"), probeName));
+  graph.append(probe);
+  const NODE_W = Math.min(MAX_NODE_W, Math.max(MIN_NODE_W, ...stages.map(s => {
+    probeName.textContent = s.name;
+    return Math.ceil(probe.getBoundingClientRect().width);
+  })));
+  probe.remove();
 
   // Layout: a stage's row is the longest dependency path leading to it. An
   // edge that spans several rows gets a narrow waypoint in every row it
@@ -326,7 +338,6 @@
     }
   });
 
-  const graph = document.getElementById("graph");
   const svg = document.getElementById("edges");
   const width = PAD * 2 + graphWidth;
   const height = PAD * 2 + rows.length * NODE_H + (rows.length - 1) * GAP_Y;

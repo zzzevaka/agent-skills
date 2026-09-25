@@ -9,6 +9,23 @@ stop at any point and continue later, in the same session or a new one.
   [`example.yaml`](../../skills/durable-flow/references/example.yaml)
 - Another worked run: [`lifecycle.md`](../../skills/durable-flow/references/lifecycle.md)
 
+## Usage
+
+Run the full flow
+```
+@durable-flow run path/to/flow.yaml
+```
+
+Run a single step.
+```
+@durable-flow run only next stage and stop path/to/flow.yaml
+```
+
+Visualize the flow.
+```
+@durable-flow visualize path/to/flow.yaml
+```
+
 ## Why
 
 At some point, I decided to automate certain aspects of my routine, such as
