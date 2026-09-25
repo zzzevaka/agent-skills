@@ -1,53 +1,144 @@
-name: spanish-review
+name: spanish-lessons
 goal: |
-  After each Spanish lesson, prepare review materials covering grammar and new
-  vocabulary.
+  Keep the Spanish lesson summaries up to date. Find the lessons in the shared
+  transcription document that have not been summarized yet and store one
+  summary document per lesson in DocuMur project "Spanish Lessons" (ID <project-id>).
+
+  Use the DocuMur MCP tools (list_documents, get_document, create_document,
+  edit_document, media__download_file_by_url, media__get_file).
+
+  There is no human in the loop. If you need user input, pause the flow with a question.
+stages:
+- name: find-last-processed-lesson
+  prompt: |
+    Find the last processed lesson in DocuMur project <project-id>.
+
+    Lesson summary documents are named by the lesson date, formatted
+    YYYY-MM-DD. List the documents in the project with list_documents and
+    pick the one with the latest date in its name.
+
+    Return:
+      - document_id: the ID of that document.
+      - lesson_date: its date, formatted YYYY-MM-DD.
+  depends_on: []
+  output_schema: last-processed-lesson
+- name: find-new-lessons
+  prompt: |
+    Download the file <transcription-document-url>
+    with media__download_file_by_url and read it with media__get_file.
+
+    The file contains Spanish lesson materials. Find the lessons that are
+    newer than the last processed lesson from the input. Start reading from
+    the end of the file so you don't process the whole history.
+
+    Return:
+      - media_file_id: the media file ID used to read the transcription.
+      - new_lessons: the new lessons, oldest first, each with:
+        - lesson_date: the lesson date, formatted YYYY-MM-DD.
+        - start_row: the row where the lesson starts in the transcription.
+        - end_row: the row where the lesson ends in the transcription.
+
+    If there are no new lessons, return an empty new_lessons list.
+  depends_on:
+  - find-last-processed-lesson
+  output_schema: new-lessons
+- name: create-lesson-summaries
+  prompt: |
+    Prepare a summary of every lesson in the input's new_lessons and store
+    each one as a document in project <project-id>.
+
+    If new_lessons is empty, finish the stage with an empty list.
+
+    Process the lessons one at a time, oldest first. After storing a lesson,
+    save the list of processed lesson dates as the stage output. When the
+    stage resumes, skip the lessons already listed in the saved output.
+
+    For each lesson:
+
+    SOURCE
+    The lesson transcription is in the media file `media_file_id`, between
+    the lesson's start_row and end_row. Read only that range.
+
+    TARGET DOCUMENT
+    - The document name is the lesson date, formatted exactly YYYY-MM-DD.
+    - If a document with that name already exists in the project, EDIT it.
+      Never create a second document for the same date.
+    - Before writing, read one existing lesson summary in the project so
+      your output matches the established house style.
+
+    STRUCTURE
+    Use exactly these markdown sections, in this order. Omit a whole section
+    only when the lesson genuinely contains nothing for it.
+
+    # Lesson <YYYY-MM-DD>
+
+    ## New Grammar
+    One bullet per grammar point taught in this lesson. State the rule, then
+    give the lesson's own example in Spanish.
+
+    ## New Vocabulary
+    One bullet per new non-verb word or phrase, formatted `word — English
+    meaning`. Include the article for nouns (el / la). No verbs here.
+
+    ## New Verbs
+    One `###` subsection per new verb, titled with the infinitive, each
+    followed by a conjugation table.
+
+    VERB TABLE RULES — follow these exactly; this is the part most often
+    done wrong:
+    - Columns, in this order:
+      | pronoun | presente | pretérito indefinido | imperfecto | futuro | presente de subjuntivo |
+    - Rows, in this order: yo, tú, él/ella/usted, nosotros, vosotros,
+      ellos/ellas/ustedes
+    - FILL EVERY CELL. Supply the complete conjugation from your own
+      knowledge of Spanish grammar. Do NOT leave a cell blank merely because
+      that form did not appear in the lesson. A table with empty cells is a
+      failed lesson.
+    - Mark irregular forms with a trailing asterisk, e.g. `hago*`.
+    - The infinitive belongs in the `###` heading, not in a table column.
+
+    The conjugation tables are reference material produced from standard
+    Spanish grammar — they are deliberately NOT extracted from the
+    transcription. Only the grammar points and the vocabulary must come from
+    this lesson.
+
+    WHAT COUNTS AS NEW
+    A word, phrase or verb is new when this lesson introduces, corrects or
+    explains it. Do not pad the summary with words merely used in passing.
+
+    Return the list of processed lesson dates, formatted YYYY-MM-DD.
+
+    Keep documents sorted by date.
+
+    Run lesson processing in parallel using sub-agents.
+  depends_on:
+  - find-new-lessons
+  output_schema: processed-lessons
 schemas:
-  last-lesson:
+  last-processed-lesson:
     type: object
     properties:
-      lesson-date:
+      document_id:
         type: str
-      document-id:
+      lesson_date:
         type: str
-  lesson-list:
+  new-lessons:
+    type: object
+    properties:
+      media_file_id:
+        type: str
+      new_lessons:
+        type: array
+        items:
+          type: object
+          properties:
+            lesson_date:
+              type: str
+            start_row:
+              type: int
+            end_row:
+              type: int
+  processed-lessons:
     type: array
     items:
-      type: object
-      properties:
-        lesson_date:
-          type: str
-        start_row:
-          type: int
-        end_row:
-          type: int
-        media_file_id:
-          type: str
-
-stages:
-  - name: find-last-lesson
-    prompt: |
-      Find the most recently processed lesson and return its date and document.
-    output_schema: last-lesson
-    state: finished
-    output:
-      lesson-date: "2026-01-01"
-      document-id: "100"
-  - name: find-new-lessons
-    prompt: |
-      Find new lessons after the date provided in the input.
-    depends_on: [find-last-lesson]
-    output_schema: lesson-list
-    state: "inprogress"
-  - name: find-new-lessons-2
-    prompt: |
-      Find new lessons after the date provided in the input.
-    depends_on: [find-last-lesson]
-    output_schema: lesson-list
-  - name: create-review-documents
-    prompt: |
-      Create review materials for each lesson in the input.
-      Create the following sections:
-        - grammar
-        - new words
-    depends_on: [find-new-lessons, find-new-lessons-2]
+      type: str

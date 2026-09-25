@@ -134,15 +134,18 @@ stages:
     depends_on: [find-invoices]
 ```
 
-### Flow visualization
+## Flow visualization
 
-When the user asks to see a flow, the agent renders it as an HTML page:
+When the user asks to see a flow, the agent renders it as an HTML page. Here is
+a run of the
+[`example.yaml`](../../skills/durable-flow/references/example.yaml) starter
+flow:
 
 ```bash
-scripts/visualize.py -p invoices.yaml
+scripts/visualize.py -p spanish-lessons.yaml
 ```
 
-![The invoices flow paused at the categorize stage](visualization.png)
+![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
 
 ## Future enhancements
 
