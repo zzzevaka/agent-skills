@@ -11,20 +11,21 @@ stop at any point and continue later, in the same session or a new one.
 
 ## Usage
 
-Run the full flow
-```
-@durable-flow run path/to/flow.yaml
-```
-
-Run a single step.
-```
-@durable-flow run only next stage and stop path/to/flow.yaml
+### Run the full flow
+```bash
+opencode run "@durable-flow run path/to/flow.yaml"
 ```
 
-Visualize the flow.
+### Run a single step.
+```bash
+opencode run "@durable-flow run only next stage and stop path/to/flow.yaml"
 ```
-@durable-flow visualize path/to/flow.yaml
+
+### Visualize the flow.
+```bash
+opencode run "@durable-flow render path/to/flow.yaml"
 ```
+![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
 
 ## Why
 
@@ -133,19 +134,6 @@ stages:
       Write a short spending summary with a total per category.
     depends_on: [find-invoices]
 ```
-
-## Flow visualization
-
-When the user asks to see a flow, the agent renders it as an HTML page. Here is
-a run of the
-[`example.yaml`](../../skills/durable-flow/references/example.yaml) starter
-flow:
-
-```bash
-scripts/visualize.py -p spanish-lessons.yaml
-```
-
-![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
 
 ## Future enhancements
 
