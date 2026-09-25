@@ -41,7 +41,8 @@ when running the commands below.
 ## Constraints
 
 - After initialization, use `scripts/state_management.py` for every state read
-  or transition. Do not read or edit the flow file directly.
+  or transition, and `scripts/visualize.py` to render it for the user. Do not
+  read or edit the flow file directly.
 - Run the script as documented; do not inspect or modify its implementation.
 
 ## Flow model
@@ -98,6 +99,22 @@ using the new state; do not blindly retry with an old revision. Read commands
 such as `get_flow` do not need a revision.
 In the examples below, replace `7` with the latest revision returned by
 `get_flow`.
+
+### Visualize the flow
+
+When the user asks to see, show, or visualize a flow, render it as HTML:
+
+```bash
+scripts/visualize.py -p "path/to/the/flow.json"
+```
+
+The script is read-only. It writes `<flow-file-stem>.html` to the current
+working directory (pass `-o path/to/page.html` to choose another location) and
+prints the absolute path of the page. The page is self-contained and shows the
+goal, stage order, dependencies, and every stage's status; selecting a stage
+shows its prompt, message, input, and output. Give the user the printed path.
+The page is a snapshot: run the script again to refresh it after the flow
+changes.
 
 ### Start the next stage
 

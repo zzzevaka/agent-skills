@@ -29,7 +29,17 @@ stages:
     prompt: |
       Find the most recently processed lesson and return its date and document.
     output_schema: last-lesson
+    state: finished
+    output:
+      lesson-date: "2026-01-01"
+      document-id: "100"
   - name: find-new-lessons
+    prompt: |
+      Find new lessons after the date provided in the input.
+    depends_on: [find-last-lesson]
+    output_schema: lesson-list
+    state: "inprogress"
+  - name: find-new-lessons-2
     prompt: |
       Find new lessons after the date provided in the input.
     depends_on: [find-last-lesson]
@@ -40,4 +50,4 @@ stages:
       Create the following sections:
         - grammar
         - new words
-    depends_on: [find-new-lessons]
+    depends_on: [find-new-lessons, find-new-lessons-2]
