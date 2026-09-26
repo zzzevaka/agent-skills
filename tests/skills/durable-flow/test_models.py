@@ -109,3 +109,28 @@ class FlowTests(unittest.TestCase):
             duplicate.validate_invariants()
         with self.assertRaisesRegex(ValidationError, "must be a previous stage"):
             forward_dependency.validate_invariants()
+
+    def test_invariant_errors_reports_every_violation(self):
+        flow = Flow(
+            name="bad",
+            goal="",
+            schemas={"broken": {"type": "array"}},
+            stages=(
+                Stage(name="first", prompt="first", depends_on=("later",)),
+                Stage(name="first", prompt="again", output_schema="missing"),
+            ),
+        )
+
+        errors = flow.invariant_errors()
+
+        self.assertEqual(len(errors), 4, errors)
+        for fragment in (
+            "array schema requires 'items'",
+            "'later', which must be a previous stage",
+            "'first' is duplicated",
+            "unknown output schema 'missing'",
+        ):
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+
+    def test_invariant_errors_is_empty_for_valid_flow(self):
+        self.assertEqual(make_flow().invariant_errors(), [])

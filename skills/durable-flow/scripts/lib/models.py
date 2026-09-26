@@ -44,49 +44,62 @@ class Flow(FlowConfig):
     revision: int = 0
 
     def validate_invariants(self) -> None:
+        errors = self.invariant_errors()
+        if errors:
+            raise ValidationError("; ".join(errors))
+
+    def invariant_errors(self) -> list[str]:
+        errors: list[str] = []
         if type(self.revision) is not int or self.revision < 0:
-            raise ValidationError("flow revision must be a non-negative integer")
+            errors.append("flow revision must be a non-negative integer")
         if not isinstance(self.name, str) or not self.name.strip():
-            raise ValidationError("flow name must be a non-empty string")
+            errors.append("flow name must be a non-empty string")
         if not isinstance(self.goal, str):
-            raise ValidationError("flow goal must be a string")
+            errors.append("flow goal must be a string")
         if not self.stages:
-            raise ValidationError("flow must contain at least one stage")
+            errors.append("flow must contain at least one stage")
 
         for name, raw_schema in self.schemas.items():
             if not isinstance(name, str) or not name:
-                raise ValidationError("schema names must be non-empty strings")
-            SchemaDef(raw_schema).validate_definition()
+                errors.append("schema names must be non-empty strings")
+                continue
+            try:
+                SchemaDef(raw_schema).validate_definition(path=f"schemas.{name}")
+            except ValidationError as err:
+                errors.append(str(err))
 
         seen: set[str] = set()
         for stage in self.stages:
             if not isinstance(stage.name, str) or not stage.name.strip():
-                raise ValidationError("stage names must be non-empty strings")
+                errors.append("stage names must be non-empty strings")
+                continue
             if not isinstance(stage.prompt, str):
-                raise ValidationError(f"stage {stage.name!r} prompt must be a string")
+                errors.append(f"stage {stage.name!r} prompt must be a string")
+            if not isinstance(stage.state, StageState):
+                errors.append(f"stage {stage.name!r} has an invalid state")
+            if stage.name in seen:
+                errors.append(f"stage {stage.name!r} is duplicated")
             if not isinstance(stage.depends_on, tuple) or not all(
                 isinstance(dependency, str) for dependency in stage.depends_on
             ):
-                raise ValidationError(f"stage {stage.name!r} dependencies must be names")
+                errors.append(f"stage {stage.name!r} dependencies must be names")
+            else:
+                if len(set(stage.depends_on)) != len(stage.depends_on):
+                    errors.append(f"stage {stage.name!r} repeats a dependency")
+                for dependency in stage.depends_on:
+                    if dependency not in seen:
+                        errors.append(
+                            f"stage {stage.name!r} depends on {dependency!r}, which must be "
+                            "a previous stage"
+                        )
             if stage.output_schema is not None and not isinstance(stage.output_schema, str):
-                raise ValidationError(f"stage {stage.name!r} output_schema must be a string")
-            if not isinstance(stage.state, StageState):
-                raise ValidationError(f"stage {stage.name!r} has an invalid state")
-            if stage.name in seen:
-                raise ValidationError(f"stage {stage.name!r} is duplicated")
-            if len(set(stage.depends_on)) != len(stage.depends_on):
-                raise ValidationError(f"stage {stage.name!r} repeats a dependency")
-            for dependency in stage.depends_on:
-                if dependency not in seen:
-                    raise ValidationError(
-                        f"stage {stage.name!r} depends on {dependency!r}, which must be "
-                        "a previous stage"
-                    )
-            if stage.output_schema is not None and stage.output_schema not in self.schemas:
-                raise ValidationError(
+                errors.append(f"stage {stage.name!r} output_schema must be a string")
+            elif stage.output_schema is not None and stage.output_schema not in self.schemas:
+                errors.append(
                     f"stage {stage.name!r} references unknown output schema {stage.output_schema!r}"
                 )
             seen.add(stage.name)
+        return errors
 
     def render(self, verbose: bool = False) -> str:
         rendered = asdict(self)

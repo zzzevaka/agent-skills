@@ -19,7 +19,7 @@ flow file.
 
 ## How it works
 
-The skill is a [`SKILL.md`](../../skills/durable-flow/SKILL.md) plus two
+The skill is a [`SKILL.md`](../../skills/durable-flow/SKILL.md) plus a few
 scripts, so it runs in any harness that supports skills: Claude Code, Codex,
 OpenCode, Pi Agent, and others.
 
@@ -69,6 +69,17 @@ opencode run "@durable-flow render path/to/flow.yaml"
 ```
 
 ![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
+
+### Validate a flow file
+
+After writing a flow by hand, check it without an agent:
+
+```bash
+python3 skills/durable-flow/scripts/validate.py -p path/to/flow.yaml
+```
+
+The script lists every problem it finds, including unknown keys such as a
+misspelled `output_shema`, and exits with `1`; a valid flow exits with `0`.
 
 ## Example: categorize invoices
 
