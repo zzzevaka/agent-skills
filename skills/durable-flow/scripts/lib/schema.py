@@ -16,8 +16,8 @@ _ANNOTATIONS = {"description", "examples"}
 class SchemaDef:
     raw: dict[str, Any]
 
-    def validate_definition(self) -> None:
-        _validate_schema(self.raw, path="schema")
+    def validate_definition(self, path: str = "schema") -> None:
+        _validate_schema(self.raw, path=path)
 
     def validate(self, value: Any) -> None:
         self.validate_definition()
@@ -50,7 +50,7 @@ def _validate_schema(node: Any, path: str) -> None:
         raise ValidationError(f"{path}: schema requires a string 'type'")
     unknown_keys = set(node) - {"type", "items", "properties", *_ANNOTATIONS}
     if unknown_keys:
-        raise ValidationError(f"{path}: unsupported schema keys: {sorted(unknown_keys)}")
+        raise ValidationError(f"{path}: unsupported schema keys: {sorted(unknown_keys, key=str)}")
     if schema_type in _SCALARS:
         if "items" in node or "properties" in node:
             raise ValidationError(f"{path}: scalar schema cannot define items or properties")

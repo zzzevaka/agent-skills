@@ -128,71 +128,77 @@ def _get_storage(path: Path) -> _Storage:
         raise ValidationError(f"unsupported flow file extension {path.suffix!r}, expected one of: {supported}")
 
 
+def parse_flow(raw_value: Any) -> Flow:
+    """Build a Flow from raw file data without checking its invariants."""
+    if not isinstance(raw_value, dict):
+        raise ValidationError("flow file must contain an object")
+    try:
+        # Read the old top-level key during the transition, but serialize
+        # the canonical field as `goal` from this point forward.
+        goal = raw_value.get("goal", raw_value.get("prompt"))
+        if goal is None:
+            raise ValidationError("missing key 'goal' (formerly 'prompt')")
+        raw_schemas = raw_value.get("schemas", {})
+        if not isinstance(raw_schemas, dict):
+            raise ValidationError("'schemas' must be an object")
+
+        stages = []
+        for index, raw_stage in enumerate(raw_value["stages"]):
+            if not isinstance(raw_stage, dict):
+                raise ValidationError(f"stage {index} must be an object")
+            raw_dependencies = raw_stage.get("depends_on", [])
+            if not isinstance(raw_dependencies, list) or not all(
+                isinstance(item, str) for item in raw_dependencies
+            ):
+                raise ValidationError(
+                    f"stage {raw_stage.get('name', index)!r} 'depends_on' must be a list of names"
+                )
+            state = StageState(raw_stage.get("state", StageState.PENDING.value))
+            legacy_message_output = state == StageState.FINISHED and "output" not in raw_stage
+            stages.append(
+                Stage(
+                    name=raw_stage["name"],
+                    prompt=raw_stage["prompt"],
+                    depends_on=tuple(raw_dependencies),
+                    output_schema=raw_stage.get("output_schema"),
+                    state=state,
+                    message=None if legacy_message_output else raw_stage.get("message"),
+                    output=(
+                        raw_stage.get("message")
+                        if legacy_message_output
+                        else raw_stage.get("output")
+                    ),
+                )
+            )
+        return Flow(
+            name=raw_value["name"],
+            goal=goal,
+            stages=tuple(stages),
+            schemas=raw_schemas,
+            revision=raw_value.get("revision", 0),
+        )
+    except ValidationError:
+        raise
+    except KeyError as err:
+        raise ValidationError(f"missing key {err}")
+    except ValueError as err:
+        raise ValidationError(f"invalid stage state: {err}")
+    except TypeError as err:
+        raise ValidationError(f"malformed flow file: {err}")
+
+
 class FlowRepository:
     def __init__(self, path: Path) -> None:
         self._path = path
         self._storage = _get_storage(path)
 
+    def read_data(self) -> Any:
+        return self._storage.read(path=self._path)
+
     def get_flow(self) -> Flow:
-        raw_value = self._storage.read(path=self._path)
-
-        if not isinstance(raw_value, dict):
-            raise ValidationError("flow file must contain an object")
-        try:
-            # Read the old top-level key during the transition, but serialize
-            # the canonical field as `goal` from this point forward.
-            goal = raw_value.get("goal", raw_value.get("prompt"))
-            if goal is None:
-                raise ValidationError("missing key 'goal' (formerly 'prompt')")
-            raw_schemas = raw_value.get("schemas", {})
-            if not isinstance(raw_schemas, dict):
-                raise ValidationError("'schemas' must be an object")
-
-            stages = []
-            for index, raw_stage in enumerate(raw_value["stages"]):
-                if not isinstance(raw_stage, dict):
-                    raise ValidationError(f"stage {index} must be an object")
-                raw_dependencies = raw_stage.get("depends_on", [])
-                if not isinstance(raw_dependencies, list) or not all(
-                    isinstance(item, str) for item in raw_dependencies
-                ):
-                    raise ValidationError(
-                        f"stage {raw_stage.get('name', index)!r} 'depends_on' must be a list of names"
-                    )
-                state = StageState(raw_stage.get("state", StageState.PENDING.value))
-                legacy_message_output = state == StageState.FINISHED and "output" not in raw_stage
-                stages.append(
-                    Stage(
-                        name=raw_stage["name"],
-                        prompt=raw_stage["prompt"],
-                        depends_on=tuple(raw_dependencies),
-                        output_schema=raw_stage.get("output_schema"),
-                        state=state,
-                        message=None if legacy_message_output else raw_stage.get("message"),
-                        output=(
-                            raw_stage.get("message")
-                            if legacy_message_output
-                            else raw_stage.get("output")
-                        ),
-                    )
-                )
-            flow = Flow(
-                name=raw_value["name"],
-                goal=goal,
-                stages=tuple(stages),
-                schemas=raw_schemas,
-                revision=raw_value.get("revision", 0),
-            )
-            flow.validate_invariants()
-            return flow
-        except ValidationError:
-            raise
-        except KeyError as err:
-            raise ValidationError(f"missing key {err}")
-        except ValueError as err:
-            raise ValidationError(f"invalid stage state: {err}")
-        except TypeError as err:
-            raise ValidationError(f"malformed flow file: {err}")
+        flow = parse_flow(self.read_data())
+        flow.validate_invariants()
+        return flow
 
     def mutate(self, revision: int, operation) -> Flow:
         """Apply one revision-checked mutation as an atomic local transaction."""

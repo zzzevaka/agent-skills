@@ -31,8 +31,9 @@ results persist across pauses.
   `0`.
 
 Directly copy and edit a reference only while creating the initial flow file.
-After the file exists, use the state-management script for every state read or
-transition.
+Then run `scripts/validate.py` on it (see [Validate the flow file](#validate-the-flow-file))
+and fix every reported error before starting the flow. After the file exists,
+use the state-management script for every state read or transition.
 
 Resolve `scripts/state_management.py` relative to this `SKILL.md` directory,
 not relative to the agent's current working directory. Use the resolved path
@@ -41,8 +42,9 @@ when running the commands below.
 ## Constraints
 
 - After initialization, use `scripts/state_management.py` for every state read
-  or transition, and `scripts/visualize.py` to render it for the user. Do not
-  read or edit the flow file directly.
+  or transition, `scripts/visualize.py` to render it for the user, and
+  `scripts/validate.py` to check it. Do not read or edit the flow file
+  directly.
 - Run the script as documented; do not inspect or modify its implementation.
 
 ## Flow model
@@ -78,6 +80,21 @@ is not copied into the flow state. Outputs are checked only when a stage is
 finished.
 
 ## Flow execution
+
+### Validate the flow file
+
+```bash
+scripts/validate.py -p "path/to/the/flow.json"
+```
+
+The script is read-only. It exits with `0` and prints `Flow file is valid` when
+the flow can run. Otherwise it exits with `1` and lists every problem it found:
+unknown keys (usually typos such as `output_shema`, which the other scripts
+silently ignore), invalid schema definitions, duplicated stages, dependencies
+on stages that are not earlier, and unknown output schemas. A missing required
+key or a malformed stage stops parsing, so only that one is reported alongside
+unknown keys; fix it and run the script again. Stage outputs are not checked
+here; they are validated by `finish_stage`.
 
 ### Get the current state
 
