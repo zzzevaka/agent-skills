@@ -1,87 +1,78 @@
 # Durable Flow
 
-A skill for running persistent, multi-stage workflows with an AI agent. The
-workflow and its progress live in a single JSON or YAML flow file, so a run can
-stop at any point and continue later, in the same session or a new one.
+An agent skill for complex multi-stage processes, such as sorting a month of
+invoices or turning a pile of documents into notes. Run in one long agent
+session, such a process gets expensive and fragile: the context keeps growing,
+the model makes more mistakes, and an interruption loses the progress. Durable
+Flow runs the process one stage at a time and keeps its state in a JSON or YAML
+flow file.
 
-- Skill instructions for the agent: [`SKILL.md`](../../skills/durable-flow/SKILL.md)
+- Agent instructions: [`SKILL.md`](../../skills/durable-flow/SKILL.md)
 - Starter flows: [`example.json`](../../skills/durable-flow/references/example.json),
   [`example.yaml`](../../skills/durable-flow/references/example.yaml)
-- Another worked run: [`lifecycle.md`](../../skills/durable-flow/references/lifecycle.md)
+- A full run with a pause and a resume: [`lifecycle.md`](../../skills/durable-flow/references/lifecycle.md)
 
-## Usage
+## Goals
 
-### Run the full flow
-```bash
-opencode run "@durable-flow run path/to/flow.yaml"
-```
-
-### Run a single step.
-```bash
-opencode run "@durable-flow run only next stage and stop path/to/flow.yaml"
-```
-
-### Visualize the flow.
-```bash
-opencode run "@durable-flow render path/to/flow.yaml"
-```
-![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
-
-## Why
-
-At some point, I decided to automate certain aspects of my routine, such as
-categorizing documents, invoices, and important messages from various sources.
-Also, for one of my projects, I needed to read a lot of doc files and convert
-them into the format I needed for my knowledge base in Obsidian.
-
-At first, I used OpenAI and Anthropic's frontier models and their harnesses,
-Claude Workspace and Codex, for this. This approach has two problems:
-
-1. Cost. When dealing with a large volume of tasks, cheap subscriptions are no
-   longer sufficient.
-2. Privacy. Some workflows process personal documents that I'd rather not show
-   to LLM providers.
-
-Another approach I tried was Pi Agent and OpenCode together with local LLMs,
-which my MacBook Pro M4 Pro with 24GB of unified memory could handle.
-gpt-oss-20b showed the best results, but they were still unsatisfactory; the
-model often made mistakes, and the more complex the workflow, the lower the
-chances of successfully completing it. The problem was clear: the context was
-too large. I came up with the idea of splitting the work into stages and
-providing only the necessary part of the context at each stage.
-
-So the solution has to:
-
-- describe the process as clearly separated stages;
-- run in any harness: OpenAI Codex, Anthropic Claude, OpenCode, Pi Agent, etc.;
-- keep its execution state, so it can wait for external events and resume after
-  an interruption;
-- promote determinism: the same process under the same conditions should lead
-  to similar results.
+- Lower the cost of complex multi-stage processes.
+- Improve their quality and repeatability.
 
 ## How it works
 
 The skill is a [`SKILL.md`](../../skills/durable-flow/SKILL.md) plus two
-scripts. The flow file describes the stages; the scripts are the only way the
-agent reads or changes it.
+scripts, so it runs in any harness that supports skills: Claude Code, Codex,
+OpenCode, Pi Agent, and others.
 
-- The main agent is an orchestrator. It starts a stage, hands the work to a
-  subagent, and records the result.
-- The subagent sees only the flow goal, the stage prompt, and the stage input
-  (the outputs of the stages it depends on). Everything else stays out of its
-  context.
-- Every change passes the flow revision the agent last saw, so a stale agent
-  cannot overwrite newer progress.
+- **One stage at a time.** The flow file splits the process into atomic
+  stages. The main agent acts as an orchestrator: it starts a stage, hands it
+  to a subagent, and records the result. The subagent sees only the flow goal,
+  the stage prompt, and the stage input (the outputs of the stages it depends
+  on). The other stages stay hidden, so the prompt stays small: the model has
+  less room to hallucinate, and a smaller, cheaper model can handle the stage.
+- **Scripts instead of file edits.** The agent reads and changes the flow only
+  through the scripts, never by opening the file. The scripts show only the
+  active stage in full, and every write passes the flow revision the agent
+  last saw, so a stale agent cannot overwrite newer progress.
+- **Structured outputs.** A stage can declare an output schema, similar to
+  structured output in LLM APIs. The stage finishes only when its output
+  matches the schema, so the next stages get the data they expect.
+- **Durable state.** The flow file holds the state of the whole run, so a run
+  can stop at any point and resume in another session. A stage can also pause
+  on purpose to wait for an outside event, such as a person's approval or a
+  pull request review.
 
-The flow can be paused and resumed. For example, it can wait for a approval from a person or review of a pull request.
+These rules are instructions, not guarantees: the skill relies on the agent
+following them. A harness with an extension API, such as Pi Agent, could
+enforce them instead (see [Future enhancements](#future-enhancements)).
 
-These are instructions, not guarantees: the skill relies on the agent following
-them. A harness with an extension API, such as Pi Agent, could enforce them
-instead (see [Future enhancements](#future-enhancements)).
+## Usage
+
+The examples use OpenCode. In other harnesses, make the same request the way
+that harness invokes skills.
+
+### Run the whole flow
+
+```bash
+opencode run "@durable-flow run path/to/flow.yaml"
+```
+
+### Run one stage and stop
+
+```bash
+opencode run "@durable-flow run only next stage and stop path/to/flow.yaml"
+```
+
+### Visualize the flow
+
+```bash
+opencode run "@durable-flow render path/to/flow.yaml"
+```
+
+![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
 
 ## Example: categorize invoices
 
-### Describe the flow
+A flow that sorts a month of invoices and summarizes the spending:
 
 ```yaml
 name: invoices
@@ -132,13 +123,34 @@ stages:
   - name: summarize
     prompt: |
       Write a short spending summary with a total per category.
-    depends_on: [find-invoices]
+    depends_on: [find-invoices, categorize]
 ```
+
+## Background
+
+I wanted to automate parts of my routine: sorting documents, invoices, and
+important messages from different sources. For another project, I had to
+convert a large set of documents into notes for my Obsidian knowledge base.
+
+At first, I used frontier models from OpenAI and Anthropic in their own
+harnesses, Claude Workspace and Codex. This approach had two problems:
+
+1. Cost. At a large volume of tasks, cheap subscriptions are no longer enough.
+2. Privacy. Some workflows process personal documents that I'd rather not show
+   to LLM providers.
+
+Next, I tried Pi Agent and OpenCode with local models that fit on my MacBook
+Pro M4 Pro with 24 GB of unified memory. gpt-oss-20b did best, but still not
+well enough: it often made mistakes, and the more complex the workflow, the
+less likely it was to finish. The context was too large. So I split the work
+into stages and gave the model only the context each stage needs.
 
 ## Future enhancements
 
-- **Parallelism.** The dependencies already form a directed acyclic graph (DAG), so every stage that is
-  ready could run at the same time when the harness supports it. Currently, stages run one at a time.
+- **Parallelism.** Stage dependencies already form a directed acyclic graph
+  (DAG), so stages whose inputs are ready could run in parallel when the
+  harness supports it. Today, stages run one at a time.
 - **Execution log.** `set_output` keeps only the latest intermediate output. A
   log of checkpoints would let a long stage resume from any saved point.
-- **Harness integration.** Enforce the rules through the harness, for example a Pi Agent extension, rather than as instructions to the agent.
+- **Harness integration.** Enforce the rules through the harness, for example
+  with a Pi Agent extension, rather than as instructions to the agent.
