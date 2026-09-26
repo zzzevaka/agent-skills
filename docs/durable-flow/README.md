@@ -133,7 +133,7 @@ important messages from different sources. For another project, I had to
 convert a large set of documents into notes for my Obsidian knowledge base.
 
 At first, I used frontier models from OpenAI and Anthropic in their own
-harnesses, Claude Workspace and Codex. This approach had two problems:
+harnesses, Claude Cowork and Codex. This approach had two problems:
 
 1. Cost. At a large volume of tasks, cheap subscriptions are no longer enough.
 2. Privacy. Some workflows process personal documents that I'd rather not show
