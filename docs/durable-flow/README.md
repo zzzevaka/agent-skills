@@ -45,6 +45,12 @@ These rules are instructions, not guarantees: the skill relies on the agent
 following them. A harness with an extension API, such as Pi Agent, could
 enforce them instead (see [Future enhancements](#future-enhancements)).
 
+## Installation
+
+```bash
+npx skills add https://github.com/zzzevaka/agent-skills --skill durable-flow
+```
+
 ## Usage
 
 The examples use OpenCode. In other harnesses, make the same request the way
