@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:">
+<title>structured-flow</title>
+<script>
+  // Resolve the theme before the first paint: "light", "dark", or "auto"
+  // (follow the system). The choice is remembered per browser when possible.
+  (() => {
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    let mode = "auto";
+    try { mode = localStorage.getItem("structured-flow-theme") || "auto"; } catch {}
+    const apply = () => {
+      const resolved = mode === "auto" ? (media.matches ? "dark" : "light") : mode;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.themeMode = mode;
+      document.documentElement.classList.toggle("dark", resolved === "dark");
+    };
+    media.addEventListener("change", apply);
+    window.setThemeMode = next => {
+      mode = next;
+      try { localStorage.setItem("structured-flow-theme", next); } catch {}
+      apply();
+    };
+    apply();
+  })();
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

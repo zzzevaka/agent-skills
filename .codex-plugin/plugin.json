@@ -1,5 +1,5 @@
 {
-  "name": "durable-flow",
+  "name": "structured-flow",
   "version": "0.1.0",
   "description": "A collection of reusable Agent Skills for AI coding assistants.",
   "author": {
@@ -13,6 +13,6 @@
     "developerName": "Leonid Maksimov",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
-    "defaultPrompt": ["Help me run or resume a durable flow."]
+    "defaultPrompt": ["Help me run or resume a structured flow."]
   }
 }

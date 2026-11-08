@@ -1,11 +1,11 @@
 {
-  "name": "durable-flow-marketplace",
+  "name": "structured-flow-marketplace",
   "interface": {
     "displayName": "Agent Skills"
   },
   "plugins": [
     {
-      "name": "durable-flow",
+      "name": "structured-flow",
       "source": {
         "source": "local",
         "path": "./"

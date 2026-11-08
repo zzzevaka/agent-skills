@@ -5,7 +5,7 @@ __pycache__/
 
 .superpowers/
 node_modules/
-src/durable-flow/ui/.roundtrip/
-src/durable-flow/ui/test-results/
-src/durable-flow/ui/playwright-report/
-src/durable-flow/ui/.preview/
+src/structured-flow/ui/.roundtrip/
+src/structured-flow/ui/test-results/
+src/structured-flow/ui/playwright-report/
+src/structured-flow/ui/.preview/

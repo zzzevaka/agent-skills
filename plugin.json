@@ -1,6 +1,6 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "durable-flow",
+  "name": "structured-flow",
   "version": "0.1.0",
   "description": "A collection of reusable Agent Skills for AI coding assistants.",
   "author": {
