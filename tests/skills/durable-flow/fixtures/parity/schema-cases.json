@@ -1,0 +1,906 @@
+[
+  {
+    "definition": {
+      "type": "string"
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": "a",
+        "errors": []
+      },
+      {
+        "value": 1,
+        "errors": [
+          "(root): expected string, got int"
+        ]
+      },
+      {
+        "value": null,
+        "errors": [
+          "(root): expected string, got NoneType"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "integer"
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": 1,
+        "errors": []
+      },
+      {
+        "value": true,
+        "errors": [
+          "(root): expected integer, got bool"
+        ]
+      },
+      {
+        "value": 1.5,
+        "errors": [
+          "(root): expected integer, got float"
+        ]
+      },
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected integer, got str"
+        ]
+      },
+      {
+        "value": 3.0,
+        "errors": []
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "number"
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": 1,
+        "errors": []
+      },
+      {
+        "value": 1.5,
+        "errors": []
+      },
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected number, got str"
+        ]
+      },
+      {
+        "value": true,
+        "errors": [
+          "(root): expected number, got bool"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "boolean"
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": true,
+        "errors": []
+      },
+      {
+        "value": 1,
+        "errors": [
+          "(root): expected boolean, got int"
+        ]
+      },
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected boolean, got str"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": [
+          1,
+          2
+        ],
+        "errors": []
+      },
+      {
+        "value": [
+          1,
+          "a"
+        ],
+        "errors": [
+          "[1]: expected integer, got str"
+        ]
+      },
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected array"
+        ]
+      },
+      {
+        "value": {},
+        "errors": [
+          "(root): expected array"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        },
+        "b": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "a"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {
+          "a": "x",
+          "b": 1
+        },
+        "errors": []
+      },
+      {
+        "value": {
+          "a": 1,
+          "b": 1
+        },
+        "errors": [
+          "a: expected string, got int"
+        ]
+      },
+      {
+        "value": {
+          "a": "x"
+        },
+        "errors": []
+      },
+      {
+        "value": {
+          "b": 1
+        },
+        "errors": [
+          "a: required field is missing"
+        ]
+      },
+      {
+        "value": {
+          "b": "x"
+        },
+        "errors": [
+          "a: required field is missing",
+          "b: expected integer, got str"
+        ]
+      },
+      {
+        "value": {
+          "b": 1,
+          "a": "x",
+          "c": 2
+        },
+        "errors": []
+      },
+      {
+        "value": [],
+        "errors": [
+          "(root): expected object"
+        ]
+      },
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected object"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "n": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "n"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {
+          "items": [
+            {
+              "n": 1
+            },
+            {
+              "n": "x"
+            }
+          ]
+        },
+        "errors": [
+          "items[1].n: expected integer, got str"
+        ]
+      },
+      {
+        "value": {
+          "items": [
+            {}
+          ]
+        },
+        "errors": [
+          "items[0].n: required field is missing"
+        ]
+      },
+      {
+        "value": {},
+        "errors": [
+          "items: required field is missing"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "string",
+      "description": "d",
+      "examples": [
+        "a"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": "a",
+        "errors": []
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object"
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {},
+        "errors": []
+      },
+      {
+        "value": {
+          "a": 1
+        },
+        "errors": []
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "it's": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "it's"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {
+          "it's": "x"
+        },
+        "errors": [
+          "it's: expected integer, got str"
+        ]
+      },
+      {
+        "value": {},
+        "errors": [
+          "it's: required field is missing"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": "a",
+        "errors": []
+      },
+      {
+        "value": "c",
+        "errors": [
+          "(root): expected one of \"a\", \"b\", got \"c\""
+        ]
+      },
+      {
+        "value": 1,
+        "errors": [
+          "(root): expected string, got int"
+        ]
+      },
+      {
+        "value": "it's",
+        "errors": [
+          "(root): expected one of \"a\", \"b\", got \"it's\""
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "it's",
+        "say \"hi\""
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": "x",
+        "errors": [
+          "(root): expected one of \"it's\", \"say \\\"hi\\\"\", got \"x\""
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "integer",
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": 1,
+        "errors": []
+      },
+      {
+        "value": 2.0,
+        "errors": []
+      },
+      {
+        "value": 3,
+        "errors": [
+          "(root): expected one of 1, 2, got 3"
+        ]
+      },
+      {
+        "value": true,
+        "errors": [
+          "(root): expected integer, got bool"
+        ]
+      },
+      {
+        "value": "1",
+        "errors": [
+          "(root): expected integer, got str"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "number",
+      "enum": [
+        1.5,
+        2
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": 1.5,
+        "errors": []
+      },
+      {
+        "value": 2.0,
+        "errors": []
+      },
+      {
+        "value": 2.5,
+        "errors": [
+          "(root): expected one of 1.5, 2, got 2.5"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": true,
+        "errors": []
+      },
+      {
+        "value": false,
+        "errors": [
+          "(root): expected one of true, got false"
+        ]
+      },
+      {
+        "value": 1,
+        "errors": [
+          "(root): expected boolean, got int"
+        ]
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "string",
+          "enum": [
+            "a"
+          ]
+        }
+      },
+      "required": [
+        "s"
+      ]
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {
+          "s": "a"
+        },
+        "errors": []
+      },
+      {
+        "value": {
+          "s": "b"
+        },
+        "errors": [
+          "s: expected one of \"a\", got \"b\""
+        ]
+      }
+    ]
+  },
+  {
+    "definition": [],
+    "definition_error": "schema: schema must be an object",
+    "values": []
+  },
+  {
+    "definition": "x",
+    "definition_error": "schema: schema must be an object",
+    "values": []
+  },
+  {
+    "definition": {},
+    "definition_error": "schema: schema requires a string 'type'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": 1
+    },
+    "definition_error": "schema: schema requires a string 'type'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "foo": 1,
+      "bar": 2
+    },
+    "definition_error": "schema: unsupported schema keys: ['bar', 'foo']",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "pattern": "x"
+    },
+    "definition_error": "schema: unsupported schema keys: ['pattern']",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "items": {
+        "type": "string"
+      }
+    },
+    "definition_error": "schema: scalar schema cannot define items or properties",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "integer",
+      "properties": {}
+    },
+    "definition_error": "schema: scalar schema cannot define items or properties",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "array"
+    },
+    "definition_error": "schema: array schema requires 'items'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "properties": {}
+    },
+    "definition_error": "schema: array schema cannot define properties",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "set"
+      }
+    },
+    "definition_error": "schema.items: unknown schema type 'set'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": []
+    },
+    "definition_error": "schema.properties: expected an object",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "nope"
+        }
+      }
+    },
+    "definition_error": "schema.properties.a: unknown schema type 'nope'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "it's": {
+          "type": "nope"
+        }
+      }
+    },
+    "definition_error": "schema.properties.it's: unknown schema type 'nope'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "items": {
+        "type": "string"
+      }
+    },
+    "definition_error": "schema: object schema cannot define items",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "set"
+    },
+    "definition_error": "schema: unknown schema type 'set'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "str"
+    },
+    "definition_error": "schema: unknown schema type 'str'; use 'string'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "int"
+    },
+    "definition_error": "schema: unknown schema type 'int'; use 'integer'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "float"
+    },
+    "definition_error": "schema: unknown schema type 'float'; use 'number'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "bool"
+    },
+    "definition_error": "schema: unknown schema type 'bool'; use 'boolean'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "str"
+        }
+      }
+    },
+    "definition_error": "schema.properties.a: unknown schema type 'str'; use 'string'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "null"
+    },
+    "definition_error": "schema: unknown schema type 'null'",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "required": []
+    },
+    "definition_error": "schema: only an object schema can define required",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "required": []
+    },
+    "definition_error": "schema: only an object schema can define required",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      },
+      "required": "a"
+    },
+    "definition_error": "schema.required: expected a list of unique strings",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      },
+      "required": [
+        1
+      ]
+    },
+    "definition_error": "schema.required: expected a list of unique strings",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "a",
+        "a"
+      ]
+    },
+    "definition_error": "schema.required: expected a list of unique strings",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "b"
+      ]
+    },
+    "definition_error": "schema.required: 'b' is not in properties",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "definition_error": null,
+    "values": [
+      {
+        "value": {},
+        "errors": []
+      }
+    ]
+  },
+  {
+    "definition": {
+      "type": "object",
+      "required": [
+        "it's"
+      ]
+    },
+    "definition_error": "schema.required: \"it's\" is not in properties",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": []
+    },
+    "definition_error": "schema.enum: expected a non-empty list",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": "a"
+    },
+    "definition_error": "schema.enum: expected a non-empty list",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "a",
+        "a"
+      ]
+    },
+    "definition_error": "schema.enum: values must be unique",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        5
+      ]
+    },
+    "definition_error": "schema.enum: 5 is not a valid string",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "integer",
+      "enum": [
+        true
+      ]
+    },
+    "definition_error": "schema.enum: true is not a valid integer",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "integer",
+      "enum": [
+        1,
+        1.0
+      ]
+    },
+    "definition_error": "schema.enum: values must be unique",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "it's",
+        null
+      ]
+    },
+    "definition_error": "schema.enum: null is not a valid string",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "enum": [
+        []
+      ]
+    },
+    "definition_error": "schema: enum is only allowed on scalar schemas",
+    "values": []
+  },
+  {
+    "definition": {
+      "type": "object",
+      "enum": [
+        {}
+      ]
+    },
+    "definition_error": "schema: enum is only allowed on scalar schemas",
+    "values": []
+  }
+]

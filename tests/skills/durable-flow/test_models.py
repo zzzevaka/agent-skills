@@ -24,7 +24,8 @@ def make_flow() -> Flow:
         schemas={
             "result": {
                 "type": "object",
-                "properties": {"answer": {"type": "str"}},
+                "properties": {"answer": {"type": "string"}},
+                "required": ["answer"],
             }
         },
         stages=(

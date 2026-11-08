@@ -119,26 +119,36 @@ schemas:
     type: object
     properties:
       document_id:
-        type: str
+        type: string
       lesson_date:
-        type: str
+        type: string
+    required:
+    - document_id
+    - lesson_date
   new-lessons:
     type: object
     properties:
       media_file_id:
-        type: str
+        type: string
       new_lessons:
         type: array
         items:
           type: object
           properties:
             lesson_date:
-              type: str
+              type: string
             start_row:
-              type: int
+              type: integer
             end_row:
-              type: int
+              type: integer
+          required:
+          - lesson_date
+          - start_row
+          - end_row
+    required:
+    - media_file_id
+    - new_lessons
   processed-lessons:
     type: array
     items:
-      type: str
+      type: string

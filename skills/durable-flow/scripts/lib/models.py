@@ -189,7 +189,7 @@ class Flow(FlowConfig):
 
     def _output_schema(self, stage: Stage) -> SchemaDef:
         if stage.output_schema is None:
-            return SchemaDef({"type": "str"})
+            return SchemaDef({"type": "string"})
         return SchemaDef(self.schemas[stage.output_schema])
 
     def _resolve_input(self, stage: Stage) -> dict[str, Any]:

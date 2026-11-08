@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Inter, Latin subset, inlined into the single HTML file by Vite. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 85%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 20%;
+    --status-pending: 240 5% 65%;
+    --status-inprogress: 217 91% 60%;
+    --status-waiting: 38 92% 50%;
+    --status-finished: 142 71% 45%;
+    --status-failed: 0 84% 60%;
+    --hl-key: 243 75% 59%;
+    --hl-string: 142 64% 30%;
+    --hl-number: 32 90% 38%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 85%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 0 0% 10.2%;
+    --foreground: 0 0% 90%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 82%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 29%;
+    --secondary-foreground: 0 0% 84%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 66%;
+    --accent: 0 0% 22%;
+    --accent-foreground: 0 0% 90%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 22%;
+    --input: 0 0% 25%;
+    --ring: 0 0% 83.1%;
+    --status-pending: 240 4% 55%;
+    --status-inprogress: 213 94% 68%;
+    --status-waiting: 43 96% 56%;
+    --status-finished: 142 69% 58%;
+    --status-failed: 0 91% 71%;
+    --hl-key: 229 93% 81%;
+    --hl-string: 142 77% 73%;
+    --hl-number: 48 96% 64%;
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply bg-background;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Rendered Markdown (prompts and goals). */
+  .markdown { @apply break-words text-[15px] leading-[1.7] [overflow-wrap:anywhere]; }
+  .markdown > :first-child { @apply mt-0; }
+  .markdown > :last-child { @apply mb-0; }
+  .markdown h1, .markdown h2, .markdown h3, .markdown h4 { @apply mb-2 mt-5 font-semibold leading-snug tracking-tight; }
+  .markdown h1 { @apply text-lg; }
+  .markdown h2 { @apply text-base; }
+  .markdown h3, .markdown h4 { @apply text-sm; }
+  .markdown p, .markdown ul, .markdown ol { @apply my-3; }
+  .markdown ul { @apply list-disc pl-5; }
+  .markdown ol { @apply list-decimal pl-5; }
+  .markdown li { @apply my-1; }
+  .markdown code { @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[13px]; }
+  .markdown pre { @apply my-3 overflow-auto rounded-md bg-muted p-3; }
+  .markdown pre code { @apply bg-transparent p-0; }
+  .markdown table { @apply my-3 border-collapse text-sm; }
+  .markdown th, .markdown td { @apply border px-3 py-1.5 text-left; }
+  .markdown a { @apply text-primary underline-offset-4 hover:underline; }
+  .markdown blockquote { @apply my-3 border-l-2 pl-4 text-muted-foreground; }
+}
+
+/* Milkdown Crepe, mapped onto the design tokens (light and dark follow the .dark class). */
+.markdown-editor .milkdown {
+  --crepe-color-background: hsl(var(--card));
+  --crepe-color-on-background: hsl(var(--foreground));
+  --crepe-color-surface: hsl(var(--muted));
+  --crepe-color-surface-low: hsl(var(--muted));
+  --crepe-color-on-surface: hsl(var(--foreground));
+  --crepe-color-on-surface-variant: hsl(var(--muted-foreground));
+  --crepe-color-outline: hsl(var(--border));
+  --crepe-color-primary: hsl(var(--primary));
+  --crepe-color-secondary: hsl(var(--accent));
+  --crepe-color-on-secondary: hsl(var(--accent-foreground));
+  --crepe-color-inverse: hsl(var(--foreground));
+  --crepe-color-on-inverse: hsl(var(--background));
+  --crepe-color-inline-code: hsl(var(--status-failed));
+  --crepe-color-error: hsl(var(--destructive));
+  --crepe-color-hover: hsl(var(--accent));
+  --crepe-color-selected: hsl(var(--accent));
+  --crepe-color-inline-area: hsl(var(--muted));
+  --crepe-font-title: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --crepe-font-default: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --crepe-font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --crepe-shadow-1: 0 1px 3px rgb(0 0 0 / 0.15);
+  --crepe-shadow-2: 0 4px 12px rgb(0 0 0 / 0.2);
+}
+/* The editor reads as the page itself: no frame, same type as rendered Markdown. */
+.markdown-editor .milkdown { background: transparent; }
+.markdown-editor .milkdown .ProseMirror { padding: 0; font-size: 15px; line-height: 1.7; min-height: 6rem; outline: none; margin-bottom: -12px; }
+.markdown-editor .milkdown .ProseMirror p { font-size: 15px; line-height: 1.7; padding: 0; margin: 0 0 12px; }
+.markdown-editor .milkdown .ProseMirror h1,
+.markdown-editor .milkdown .ProseMirror h2,
+.markdown-editor .milkdown .ProseMirror h3,
+.markdown-editor .milkdown .ProseMirror h4 { font-family: inherit; font-weight: 600; letter-spacing: -0.01em; line-height: 1.375; margin: 0 0 8px; }
+.markdown-editor .milkdown .ProseMirror h1 { font-size: 1.125rem; }
+.markdown-editor .milkdown .ProseMirror h2 { font-size: 1rem; }
+.markdown-editor .milkdown .ProseMirror h3,
+.markdown-editor .milkdown .ProseMirror h4 { font-size: 0.875rem; }
+.markdown-editor .milkdown .ProseMirror code { font-size: 13px; padding: 2px 6px; border-radius: 4px; background: hsl(var(--muted)); color: inherit; }
+.markdown-editor .milkdown .ProseMirror pre { margin: 0 0 12px; padding: 12px; border-radius: 6px; background: hsl(var(--muted)); }
+.markdown-editor .milkdown .ProseMirror blockquote { padding-left: 16px; margin: 0 0 12px; color: hsl(var(--muted-foreground)); }
+.markdown-editor .milkdown .ProseMirror blockquote::before { width: 2px; top: 0; bottom: 0; background: hsl(var(--border)); }
+.markdown-editor .milkdown .ProseMirror > :not(ul, ol) + :is(h1, h2, h3, h4) { margin-top: 20px; }
+.markdown-editor .milkdown .ProseMirror > :is(ul, ol) + :not(ul, ol) { margin-top: 12px; }
+.markdown-editor .milkdown .ProseMirror > :is(ul, ol) + :is(h1, h2, h3, h4) { margin-top: 20px; }
+.markdown-editor .milkdown .ProseMirror a { color: hsl(var(--primary)); }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block { padding: 0; }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block > .list-item { padding: 2px 0; }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block li { gap: 4px; }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block li .label-wrapper { height: 1.7em; width: 16px; color: hsl(var(--foreground)); }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block li .label-wrapper svg { fill: hsl(var(--foreground)); }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block li .label-wrapper .label { height: 1.7em; width: 16px; padding: 0; line-height: 1.7; text-align: right; }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block .list-item > .children { margin: 0; }
+.markdown-editor .milkdown .ProseMirror .milkdown-list-item-block p { margin: 0; padding: 0; }
