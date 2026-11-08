@@ -90,6 +90,7 @@ describe("Overview", () => {
 
   it("edges_are_drawn_and_finished_sources_are_marked_done", () => {
     renderOverview();
+    // one line per source stage
     const paths = document.querySelectorAll(".edges path");
     expect(paths).toHaveLength(2);
     expect(paths[0]).toHaveClass("done");

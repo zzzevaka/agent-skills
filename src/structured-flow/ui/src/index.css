@@ -178,3 +178,7 @@
 .markdown-editor .milkdown .ProseMirror .milkdown-list-item-block li .label-wrapper .label { height: 1.7em; width: 16px; padding: 0; line-height: 1.7; text-align: right; }
 .markdown-editor .milkdown .ProseMirror .milkdown-list-item-block .list-item > .children { margin: 0; }
 .markdown-editor .milkdown .ProseMirror .milkdown-list-item-block p { margin: 0; padding: 0; }
+
+/* Arrows of the flow graph: one hue per source stage (--h set inline). */
+.edge-line { stroke: hsl(var(--h) 65% 48%); }
+.dark .edge-line { stroke: hsl(var(--h) 70% 66%); }

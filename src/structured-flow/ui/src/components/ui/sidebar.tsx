@@ -11,10 +11,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const DEFAULT_STORAGE_KEY = "structured-flow-sidebar";
-const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const SIDEBAR_MIN_WIDTH = 200;
+const SIDEBAR_MAX_WIDTH = 600;
+const SIDEBAR_DEFAULT_WIDTH = 256; // 16rem
+const SIDEBAR_KEY_STEP = 16;
+const clampWidth = (width: number) => Math.min(Math.max(Math.round(width), SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
 
 interface SidebarContextValue {
   state: "expanded" | "collapsed";
@@ -24,6 +28,11 @@ interface SidebarContextValue {
   openMobile: boolean;
   setOpenMobile: (open: boolean | ((open: boolean) => boolean)) => void;
   toggleSidebar: () => void;
+  /** Expanded desktop width in px. */
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
+  /** True while the edge is being dragged; the width transition is off then. */
+  setResizing: (resizing: boolean) => void;
 }
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null);
@@ -44,6 +53,17 @@ function readStoredOpen(key: string, fallback: boolean): boolean {
     /* use the default */
   }
   return fallback;
+}
+
+/** The remembered width; storage can be missing or blocked. */
+function readStoredWidth(key: string): number {
+  try {
+    const stored = Number(localStorage.getItem(key));
+    if (Number.isFinite(stored) && stored >= SIDEBAR_MIN_WIDTH && stored <= SIDEBAR_MAX_WIDTH) return stored;
+  } catch {
+    /* use the default */
+  }
+  return SIDEBAR_DEFAULT_WIDTH;
 }
 
 interface SidebarProviderProps extends React.ComponentProps<"div"> {
@@ -87,6 +107,23 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
       [setOpenProp, open, storageKey],
     );
 
+    const widthKey = `${storageKey}-width`;
+    const [sidebarWidth, _setSidebarWidth] = React.useState(() => readStoredWidth(widthKey));
+    const setSidebarWidth = React.useCallback(
+      (width: number) => {
+        const next = clampWidth(width);
+        _setSidebarWidth(next);
+        try {
+          localStorage.setItem(widthKey, String(next));
+        } catch {
+          /* the width just is not remembered */
+        }
+      },
+      [widthKey],
+    );
+
+    const [resizing, setResizing] = React.useState(false);
+
     const toggleSidebar = React.useCallback(
       () => (isMobile ? setOpenMobile((current) => !current) : setOpen((current) => !current)),
       [isMobile, setOpen, setOpenMobile],
@@ -105,8 +142,8 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
 
     const state = open ? "expanded" : "collapsed";
     const contextValue = React.useMemo<SidebarContextValue>(
-      () => ({ state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+      () => ({ state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, sidebarWidth, setSidebarWidth, setResizing }),
+      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, sidebarWidth, setSidebarWidth, setResizing],
     );
 
     return (
@@ -115,11 +152,12 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
           <div
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH,
+                "--sidebar-width": `${sidebarWidth}px`,
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
             }
+            data-resizing={resizing || undefined}
             className={cn("group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar", className)}
             ref={ref}
             {...props}
@@ -186,7 +224,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
       >
         <div
           className={cn(
-            "relative w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+            "relative w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear group-data-[resizing]/sidebar-wrapper:transition-none",
             "group-data-[collapsible=offcanvas]:w-0",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
@@ -195,7 +233,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
         />
         <div
           className={cn(
-            "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
+            "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex group-data-[resizing]/sidebar-wrapper:transition-none",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -212,6 +250,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
           >
             {children}
           </div>
+          {state === "expanded" && <SidebarResizer side={side} />}
         </div>
       </div>
     );
@@ -266,6 +305,63 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
   },
 );
 SidebarRail.displayName = "SidebarRail";
+
+/** Drag handle on the inner edge of the expanded sidebar; arrow keys resize it too. */
+function SidebarResizer({ side }: { side: "left" | "right" }) {
+  const { sidebarWidth, setSidebarWidth, setResizing } = useSidebar();
+  const [dragging, setDragging] = React.useState(false);
+  const drag = React.useRef<{ startX: number; startWidth: number } | null>(null);
+  const sign = side === "left" ? 1 : -1;
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { startX: event.clientX, startWidth: sidebarWidth };
+    setDragging(true);
+    setResizing(true);
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    setSidebarWidth(drag.current.startWidth + sign * (event.clientX - drag.current.startX));
+  };
+  const endDrag = () => {
+    drag.current = null;
+    setDragging(false);
+    setResizing(false);
+  };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const grow = event.key === (side === "left" ? "ArrowRight" : "ArrowLeft");
+    const shrink = event.key === (side === "left" ? "ArrowLeft" : "ArrowRight");
+    if (!grow && !shrink) return;
+    event.preventDefault();
+    setSidebarWidth(sidebarWidth + (grow ? SIDEBAR_KEY_STEP : -SIDEBAR_KEY_STEP));
+  };
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuemin={SIDEBAR_MIN_WIDTH}
+      aria-valuemax={SIDEBAR_MAX_WIDTH}
+      aria-valuenow={sidebarWidth}
+      tabIndex={0}
+      data-sidebar="resizer"
+      data-dragging={dragging || undefined}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH)}
+      onKeyDown={onKeyDown}
+      className={cn(
+        "absolute inset-y-0 z-30 w-1.5 cursor-ew-resize touch-none transition-colors hover:bg-sidebar-border focus-visible:bg-sidebar-border focus-visible:outline-none data-[dragging]:bg-sidebar-border",
+        side === "left" ? "-right-[3px]" : "-left-[3px]",
+      )}
+    />
+  );
+}
 
 const SidebarInset = React.forwardRef<HTMLElement, React.ComponentProps<"main">>(({ className, ...props }, ref) => (
   <main ref={ref} className={cn("relative flex min-w-0 flex-1 flex-col bg-background", className)} {...props} />

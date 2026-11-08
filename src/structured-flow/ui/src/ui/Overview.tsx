@@ -1,9 +1,10 @@
-import { Maximize2, Minimize2 } from "lucide-react";
+import { ArrowDownUp, ArrowLeftRight, Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { setMeta } from "../domain/ops";
 import { useFlowStore, useFlowStoreApi } from "../store/flowStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Direction } from "./layoutGraph";
 import { FlowGraph } from "./FlowGraph";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { navigate } from "./route";
@@ -15,6 +16,7 @@ export function Overview({ selected }: { selected: string | null }) {
   const current = stages.find((s) => s.name === selected)?.name ?? null;
   const store = useFlowStoreApi();
   const [fullscreen, setFullscreen] = useState(false);
+  const [direction, setDirection] = useState<Direction>("vertical");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -30,8 +32,8 @@ export function Overview({ selected }: { selected: string | null }) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold tracking-tight">Overview</h2>
-      <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
-        <div className="min-w-0 max-w-3xl">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="min-w-0">
           <MarkdownEditor
             ariaLabel="Goal"
             placeholder="Please enter flow goal ..."
@@ -45,24 +47,42 @@ export function Overview({ selected }: { selected: string | null }) {
         <Card
           data-testid="flow-card"
           data-fullscreen={fullscreen ? "true" : undefined}
-          className={cn("min-w-0", fullscreen && "fixed inset-0 z-50 flex flex-col rounded-none border-0")}
+          className={cn(
+            "flex min-w-0 flex-col",
+            // Pinned and at most 80% of the window, with the graph scrolling inside:
+            // the goal's height never changes the flow's.
+            fullscreen ? "fixed inset-0 z-50 rounded-none border-0" : "max-h-[80svh] lg:sticky lg:top-6 lg:self-start",
+          )}
         >
           <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle>Flow</CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label={fullscreen ? "Exit full screen" : "Expand flow to full screen"}
-              title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
-              onClick={() => setFullscreen((v) => !v)}
-            >
-              {fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-label={direction === "vertical" ? "Lay out stages left to right" : "Lay out stages top to bottom"}
+                title={direction === "vertical" ? "Left to right" : "Top to bottom"}
+                onClick={() => setDirection((d) => (d === "vertical" ? "horizontal" : "vertical"))}
+              >
+                {direction === "vertical" ? <ArrowLeftRight className="size-4" /> : <ArrowDownUp className="size-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-label={fullscreen ? "Exit full screen" : "Expand flow to full screen"}
+                title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
+                onClick={() => setFullscreen((v) => !v)}
+              >
+                {fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className={cn("space-y-3 pt-2", fullscreen && "flex min-h-0 flex-1 flex-col")}>
+          <CardContent className="flex min-h-0 flex-1 flex-col space-y-3 pt-2">
             <FlowGraph
-              className={fullscreen ? "flex-1" : undefined}
+              className="flex-1"
+              direction={direction}
               stages={stages}
               selected={current}
               onSelect={(name) => navigate({ tab: "overview", item: name }, { replace: true })}

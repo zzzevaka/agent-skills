@@ -180,3 +180,45 @@ describe("theme toggle", () => {
     spy.mockRestore();
   });
 });
+
+describe("AppSidebar resize", () => {
+  const handle = () => screen.getByRole("separator", { name: "Resize sidebar" });
+  const width = () => (document.querySelector(".group\\/sidebar-wrapper") as HTMLElement).style.getPropertyValue("--sidebar-width");
+
+  beforeAll(() => {
+    // jsdom has no pointer capture
+    Element.prototype.setPointerCapture ??= () => {};
+  });
+
+  it("drags_to_resize_and_clamps_to_limits", () => {
+    setup();
+    expect(width()).toBe("256px");
+    fireEvent.pointerDown(handle(), { button: 0, clientX: 256, pointerId: 1 });
+    fireEvent.pointerMove(handle(), { clientX: 356, pointerId: 1 });
+    expect(width()).toBe("356px");
+    fireEvent.pointerMove(handle(), { clientX: 2000, pointerId: 1 });
+    expect(width()).toBe("600px");
+    fireEvent.pointerMove(handle(), { clientX: 0, pointerId: 1 });
+    expect(width()).toBe("200px");
+    fireEvent.pointerUp(handle(), { pointerId: 1 });
+    fireEvent.pointerMove(handle(), { clientX: 400, pointerId: 1 });
+    expect(width()).toBe("200px");
+  });
+
+  it("resizes_with_arrow_keys_and_resets_on_double_click", () => {
+    setup();
+    fireEvent.keyDown(handle(), { key: "ArrowRight" });
+    expect(width()).toBe("272px");
+    fireEvent.keyDown(handle(), { key: "ArrowLeft" });
+    fireEvent.keyDown(handle(), { key: "ArrowLeft" });
+    expect(width()).toBe("240px");
+    fireEvent.doubleClick(handle());
+    expect(width()).toBe("256px");
+  });
+
+  it("remembers_the_width", () => {
+    setup();
+    fireEvent.keyDown(handle(), { key: "ArrowRight" });
+    expect(localStorage.getItem("structured-flow-sidebar-width")).toBe("272");
+  });
+});

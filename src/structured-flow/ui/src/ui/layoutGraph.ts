@@ -1,62 +1,92 @@
 /**
- * Layered layout of the stage graph, ported from the previous visualization
- * page. A stage's row is the longest dependency path leading to it. An edge
- * that spans several rows gets a narrow waypoint in every row it crosses, so
- * it runs beside the stages in between instead of behind them. Within a row,
- * items are ordered by the mean position of their predecessors to reduce
- * crossings; ties keep execution order, with waypoints after stages.
+ * Layout of the stage graph (shown top to bottom; "horizontal" turns it into
+ * a row from left to right, with the arrows below it). Stages run strictly one after another, so they
+ * form a single vertical column in execution order: placing two stages side by
+ * side would suggest they can run in parallel. Dependencies are drawn to the
+ * right of the column. All arrows leaving a stage share one line: it leaves
+ * the right side of the stage, runs down a lane, and branches off into the
+ * right side of each dependent stage. Each stage owns its own lane, so arrows
+ * of different stages can be told apart; the first stage gets the lane
+ * nearest to the column, the next stage one further out, and so on. A lane is
+ * reused by a later stage only when their lines do not overlap.
  */
 export const NODE_H = 64;
-export const GAP_X = 20;
 export const GAP_Y = 44;
+/** Gap between stages when the column is laid out as a row. */
+export const GAP_X = 44;
 export const PAD = 32;
 export const MIN_NODE_W = 196;
 export const MAX_NODE_W = 360;
-export const WAYPOINT_W = 16;
-const EDGE_SPREAD = 18;
+/** Distance from the stage column to the first lane. */
+export const LANE_START = 28;
+export const LANE_GAP = 14;
+/** Where along a stage's far side arrows come in (first part) and go out (last part), as a fraction. */
+const IN_Y = 0.3;
+const OUT_Y = 0.7;
+const CORNER = 8;
+const ARROW = 5;
 
 export interface GraphStage {
   name: string;
   depends_on: string[];
 }
 
+export type Direction = "vertical" | "horizontal";
+
 export interface GraphNode {
   name: string;
   x: number;
   y: number;
   w: number;
+  h: number;
+  /** Position in the column, same as the stage's index. */
   row: number;
 }
 
 export interface GraphEdge {
   from: string;
+  /** Index of the `from` stage. */
+  source: number;
   to: string;
+  /** This edge alone: out of `from`, down its lane, into `to`. */
   path: string;
+  lane: number;
+}
+
+/** All edges leaving one stage, drawn as one line with a branch per target. */
+export interface GraphTrunk {
+  from: string;
+  /** Index of the `from` stage. */
+  source: number;
+  to: string[];
+  path: string;
+  lane: number;
 }
 
 export interface GraphLayout {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  trunks: GraphTrunk[];
   width: number;
   height: number;
 }
 
-interface Item {
-  name: string | null; // null for a waypoint
-  index: number;
-  row: number;
-  w: number;
-  x: number;
-  y: number;
-  preds: Item[];
+interface Trunk {
+  from: number;
+  to: number[];
+  last: number;
+  lane: number;
 }
 
-interface Link {
-  from: string;
-  to: string;
-  hops: Item[];
-  x1: number;
-  x2: number;
+/**
+ * Hue (degrees) of the arrows leaving the stage at `source`. Steps by the
+ * golden angle, so stages next to each other get clearly different colours
+ * and no hue repeats before many stages have passed. The greens (120-200) are
+ * left out: green already means "finished".
+ */
+export function edgeHue(source: number): number {
+  const spread = (source * 137.508) % 360;
+  return Math.round((200 + spread * (240 / 360)) % 360);
 }
 
 /** Shared node width: enough for the longest name, within limits. */
@@ -65,117 +95,99 @@ export function nodeWidthFor(names: string[]): number {
   return Math.min(MAX_NODE_W, Math.max(MIN_NODE_W, 58 + 8 * longest));
 }
 
-const cx = (item: Item) => item.x + item.w / 2;
-
-function hop(x1: number, y1: number, x2: number, y2: number): string {
-  const stub = 10;
-  const top = y1 + stub;
-  const bottom = y2 - stub;
-  const dy = Math.max(16, (bottom - top) / 2);
-  return ` L${x1},${top} C${x1},${top + dy} ${x2},${bottom - dy} ${x2},${bottom} L${x2},${y2}`;
-}
-
 export function layoutGraph(
   stages: GraphStage[],
-  { nodeWidth }: { nodeWidth: number },
+  { nodeWidth, direction = "vertical" }: { nodeWidth: number; direction?: Direction },
 ): GraphLayout {
+  // Everything is worked out along the flow (u: down a column, or along a
+  // row) and across it (v), then turned into x and y at the end.
+  const horizontal = direction === "horizontal";
+  const along = horizontal ? nodeWidth : NODE_H; // size of a stage along the flow
+  const across = horizontal ? NODE_H : nodeWidth;
+  const step = along + (horizontal ? GAP_X : GAP_Y);
+  const pt = (u: number, v: number) => (horizontal ? `${u},${v}` : `${v},${u}`);
+  const start = (index: number) => PAD + index * step;
+
   // Dependencies on missing, later or own stages are ignored, never fatal.
-  const byName = new Map<string, Item>();
-  const stageItems: { item: Item; deps: Item[] }[] = [];
-  stages.forEach((stage, index) => {
-    const deps = [...new Set(stage.depends_on)]
-      .map((name) => byName.get(name))
-      .filter((dep): dep is Item => dep !== undefined);
-    const row = Math.max(-1, ...deps.map((dep) => dep.row)) + 1;
-    const item: Item = { name: stage.name, index, row, w: nodeWidth, x: 0, y: 0, preds: [] };
-    byName.set(stage.name, item);
-    stageItems.push({ item, deps });
+  const indexOf = new Map<string, number>();
+  const targets = stages.map(() => [] as number[]);
+  stages.forEach((stage, to) => {
+    for (const name of new Set(stage.depends_on)) {
+      const from = indexOf.get(name);
+      if (from !== undefined) targets[from].push(to);
+    }
+    indexOf.set(stage.name, to);
   });
 
-  const rows: Item[][] = [];
-  for (const { item } of stageItems) (rows[item.row] ??= []).push(item);
+  const trunks: Trunk[] = [];
+  targets.forEach((to, from) => {
+    if (to.length) trunks.push({ from, to, last: to[to.length - 1], lane: 0 });
+  });
 
-  const links: Link[] = [];
-  for (const { item, deps } of stageItems) {
-    for (const dep of deps) {
-      const hops: Item[] = [dep];
-      for (let row = dep.row + 1; row < item.row; row += 1) {
-        const waypoint: Item = {
-          name: null,
-          index: item.index,
-          row,
-          w: WAYPOINT_W,
-          x: 0,
-          y: 0,
-          preds: [hops[hops.length - 1]],
-        };
-        rows[row].push(waypoint);
-        hops.push(waypoint);
-      }
-      item.preds.push(hops[hops.length - 1]);
-      hops.push(item);
-      links.push({ from: dep.name!, to: item.name!, hops, x1: 0, x2: 0 });
-    }
+  // Lanes in stage order, each on the nearest lane whose lines do not overlap
+  // it (touching at a stage is fine, since arrows come in before and leave
+  // after the middle of a stage).
+  const lanes: Trunk[][] = [];
+  for (const trunk of trunks) {
+    let lane = lanes.findIndex((used) => used.every((o) => o.last <= trunk.from || trunk.last <= o.from));
+    if (lane === -1) lane = lanes.push([]) - 1;
+    lanes[lane].push(trunk);
+    trunk.lane = lane;
   }
 
-  const center = (item: Item) =>
-    item.preds.length ? item.preds.reduce((sum, p) => sum + cx(p), 0) / item.preds.length : item.index;
-  const rowWidth = (row: Item[]) => row.reduce((sum, n) => sum + n.w, 0) + (row.length - 1) * GAP_X;
-  const graphWidth = rows.length ? Math.max(...rows.map(rowWidth)) : 0;
-
-  rows.forEach((row, y) => {
-    row.sort(
-      (a, b) =>
-        center(a) - center(b) || Number(a.name === null) - Number(b.name === null) || a.index - b.index,
+  const edge = PAD + across; // far side of the stages, across the flow
+  const tip = edge + 2;
+  const uOut = (index: number) => start(index) + OUT_Y * along;
+  const uIn = (index: number) => start(index) + IN_Y * along;
+  const arrow = (u: number) =>
+    ` M${pt(u - ARROW + 1, tip + ARROW)} L${pt(u, tip)} L${pt(u + ARROW - 1, tip + ARROW)}`;
+  const laneV = (trunk: Trunk) => edge + LANE_START + trunk.lane * LANE_GAP;
+  /** From the stage, along its lane, into the stage at `last`. */
+  const run = (trunk: Trunk, last: number) => {
+    const v = laneV(trunk);
+    const u1 = uOut(trunk.from);
+    const u2 = uIn(last);
+    return (
+      `M${pt(u1, edge)} L${pt(u1, v - CORNER)} Q${pt(u1, v)} ${pt(u1 + CORNER, v)}` +
+      ` L${pt(u2 - CORNER, v)} Q${pt(u2, v)} ${pt(u2, v - CORNER)} L${pt(u2, tip)}` +
+      arrow(u2)
     );
-    let x = PAD + (graphWidth - rowWidth(row)) / 2;
-    for (const item of row) {
-      item.x = x;
-      item.y = PAD + y * (NODE_H + GAP_Y);
-      x += item.w + GAP_X;
-    }
-  });
-
-  // Spread several edges along a stage's edge, ordered by their neighbouring
-  // hops so that they do not cross.
-  const spread = (list: Link[], neighbour: (link: Link) => Item, assign: (link: Link, dx: number) => void, centreX: number) => {
-    list.sort((a, b) => cx(neighbour(a)) - cx(neighbour(b)));
-    list.forEach((link, i) => assign(link, centreX + (i - (list.length - 1) / 2) * EDGE_SPREAD));
   };
-  for (const { item } of stageItems) {
-    spread(links.filter((l) => l.hops[0] === item), (l) => l.hops[1], (l, x) => (l.x1 = x), cx(item));
-    spread(links.filter((l) => l.hops[l.hops.length - 1] === item), (l) => l.hops[l.hops.length - 2], (l, x) => (l.x2 = x), cx(item));
-  }
 
-  const edges: GraphEdge[] = links.map((link) => {
-    const src = link.hops[0];
-    const dst = link.hops[link.hops.length - 1];
-    let x = link.x1;
-    let y = src.y + NODE_H;
-    let path = `M${x},${y}`;
-    for (const waypoint of link.hops.slice(1, -1)) {
-      path += hop(x, y, cx(waypoint), waypoint.y);
-      x = cx(waypoint);
-      y = waypoint.y + NODE_H;
-      path += ` L${x},${y}`;
+  const edges: GraphEdge[] = [];
+  const merged: GraphTrunk[] = trunks.map((trunk) => {
+    for (const to of trunk.to) {
+      edges.push({ from: stages[trunk.from].name, source: trunk.from, to: stages[to].name, path: run(trunk, to), lane: trunk.lane });
     }
-    const y2 = dst.y - 3;
-    path += hop(x, y, link.x2, y2) + ` M${link.x2 - 4},${y2 - 5} L${link.x2},${y2} L${link.x2 + 4},${y2 - 5}`;
-    return { from: link.from, to: link.to, path };
+    const v = laneV(trunk);
+    const branches = trunk.to
+      .slice(0, -1)
+      .map((to) => ` M${pt(uIn(to), v)} L${pt(uIn(to), tip)}${arrow(uIn(to))}`)
+      .join("");
+    return {
+      from: stages[trunk.from].name,
+      source: trunk.from,
+      to: trunk.to.map((to) => stages[to].name),
+      path: run(trunk, trunk.last) + branches,
+      lane: trunk.lane,
+    };
   });
 
+  const gutter = lanes.length ? LANE_START + (lanes.length - 1) * LANE_GAP : 0;
+  const acrossSize = PAD * 2 + (stages.length ? across + gutter : 0);
+  const alongSize = stages.length ? PAD * 2 + stages.length * along + (stages.length - 1) * (step - along) : PAD * 2;
   return {
-    nodes: stageItems.map(({ item }) => ({
-      name: item.name!,
-      x: item.x,
-      y: item.y,
-      w: item.w,
-      row: item.row,
+    nodes: stages.map((stage, index) => ({
+      name: stage.name,
+      x: horizontal ? start(index) : PAD,
+      y: horizontal ? PAD : start(index),
+      w: nodeWidth,
+      h: NODE_H,
+      row: index,
     })),
     edges,
-    width: PAD * 2 + graphWidth,
-    height: rows.length
-      ? PAD * 2 + rows.length * NODE_H + (rows.length - 1) * GAP_Y
-      : PAD * 2,
+    trunks: merged,
+    width: horizontal ? alongSize : acrossSize,
+    height: horizontal ? acrossSize : alongSize,
   };
 }

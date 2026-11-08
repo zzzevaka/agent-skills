@@ -47,6 +47,8 @@ when running the commands below.
   [Show or edit the flow](#show-or-edit-the-flow)). Do not read or edit the flow
   file directly.
 - Run the script as documented; do not inspect or modify its implementation.
+- The script allows to read the entire flow definition. However, avoid doing that.
+  Use it when it is requested explicitly.
 
 ## Flow model
 
