@@ -35,3 +35,20 @@ if (!Element.prototype.releasePointerCapture) Element.prototype.releasePointerCa
 
 // jsdom cannot host ProseMirror; unit tests use a textarea stand-in (Playwright covers the real editor).
 vi.mock("../src/ui/MarkdownEditor", () => import("./mocks/markdownEditor"));
+
+// sonner removes a dismissed toast 200 ms later with a timer it never clears. When a test file ends
+// first, jsdom is already gone and the timer throws "window is not defined", which Vitest reports as
+// an unhandled error (seen on slower CI runners). A timer that fires after the environment is torn
+// down has nothing left to update, so skip it.
+const realSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) =>
+  realSetTimeout(
+    typeof handler === "function"
+      ? (...inner: unknown[]) => {
+          if (typeof window === "undefined") return;
+          return (handler as (...a: unknown[]) => unknown)(...inner);
+        }
+      : handler,
+    timeout,
+    ...args,
+  )) as typeof setTimeout;
