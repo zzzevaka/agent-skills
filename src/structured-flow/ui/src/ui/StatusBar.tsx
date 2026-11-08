@@ -1,7 +1,9 @@
 import { useFlowStore } from "../store/flowStore";
 import { Problems } from "./Problems";
 import { ProgressSummary } from "./ProgressSummary";
+import { ReloadButton } from "./ReloadButton";
 import { RevisionBadge } from "./RevisionBadge";
+import { RunButton } from "./RunButton";
 
 export function StatusBar() {
   const lastError = useFlowStore((s) => s.lastError);
@@ -13,7 +15,9 @@ export function StatusBar() {
           {lastError}
         </p>
       )}
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-2 whitespace-nowrap sm:gap-4">
+        <ReloadButton />
+        <RunButton />
         <ProgressSummary />
         <RevisionBadge />
       </div>

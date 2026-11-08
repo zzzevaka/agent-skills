@@ -13,7 +13,7 @@ export function ProgressSummary() {
   const finished = stages.filter((s) => s.state === "finished").length;
   return (
     <div className="flex items-center gap-2" title={`${finished} of ${stages.length} stages finished`}>
-      <div className="flex h-1.5 w-28 overflow-hidden rounded-full bg-muted" data-testid="progress">
+      <div className="flex h-1.5 w-28 overflow-hidden max-sm:w-12 rounded-full bg-muted" data-testid="progress">
         {counts.map(({ state, count }) => (
           <span
             key={state}

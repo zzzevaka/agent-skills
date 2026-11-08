@@ -32,8 +32,8 @@ jobs:
 
       - name: Stage the site
         run: |
-          mkdir _site
-          cp skills/structured-flow/assets/flow-ui.html _site/index.html
+          mkdir -p _site/structured-flow
+          cp skills/structured-flow/assets/flow-ui.html _site/structured-flow/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

@@ -1,4 +1,4 @@
-import { FilePlus2, FolderOpen, RefreshCw, SaveAll } from "lucide-react";
+import { FilePlus2, FolderOpen, SaveAll } from "lucide-react";
 import type { StoreApi } from "zustand";
 import type { FileFormat } from "../domain/serialize";
 import type { PersistenceState } from "../io/persistence";
@@ -24,12 +24,6 @@ function Actions({ api }: { api: StoreApi<PersistenceState> }) {
         <FolderOpen />
         <span className={label}>Open file</span>
       </Button>
-      {adapter?.kind === "handle" && (
-        <Button variant="ghost" className={action} disabled={busy} title="Reload from file" onClick={() => void actions.reload()}>
-          <RefreshCw />
-          <span className={label}>Reload from file</span>
-        </Button>
-      )}
       {fsSupported && (
         <Button variant="ghost" className={action} disabled={busy} aria-label="Save as" title="Save as" onClick={() => void actions.saveAs()}>
           <SaveAll />

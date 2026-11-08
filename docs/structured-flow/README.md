@@ -79,6 +79,9 @@ gives you the path of the page:
 open skills/structured-flow/assets/flow-ui.html
 ```
 
+The same page is also published online: <https://zzzevaka.github.io/agent-skills/structured-flow/>.
+It runs entirely in your browser, so your flow file is never uploaded.
+
 A sidebar lists the Overview, every stage with its status and every output schema; the
 page shows the goal, the progress, the stage graph, each stage's prompt, state, input
 and output, and the schemas. The sidebar collapses to an icon rail, and becomes a drawer
@@ -119,6 +122,13 @@ still holds the previous revision is rejected instead of overwriting your change
 
 Limits: comments in a hand-written YAML file are not preserved when the page saves it,
 exactly as when the scripts rewrite it.
+
+### How to run, from the page
+
+The **How to run?** button in the bottom bar opens a short guide for the agent you use (OpenCode,
+Claude Code or Codex): the command that installs the skill, a button that downloads the flow
+file, and the commands that start the run, for the whole flow or for one stage. Unsaved
+changes are not in the downloaded file, so save first.
 
 ### Validate a flow file
 
