@@ -68,13 +68,57 @@ opencode run "@durable-flow run path/to/flow.yaml"
 opencode run "@durable-flow run only next stage and stop path/to/flow.yaml"
 ```
 
-### Visualize the flow
+### View and edit the flow
+
+The skill ships a single static page, [`flow-ui.html`](../../skills/durable-flow/assets/flow-ui.html).
+There is nothing to run: open it in a browser (it needs no server and no network),
+click **Open file** and choose your flow file. Ask the agent to "show the flow" and it
+gives you the path of the page:
 
 ```bash
-opencode run "@durable-flow render path/to/flow.yaml"
+open skills/durable-flow/assets/flow-ui.html
 ```
 
-![The spanish-lessons flow with the create-lesson-summaries stage in progress](visualization.png)
+A sidebar lists the Overview, every stage with its status and every output schema; the
+page shows the goal, the progress, the stage graph, each stage's prompt, state, input
+and output, and the schemas. The sidebar collapses to an icon rail, and becomes a drawer
+on small screens.
+
+![The spanish-lessons flow with the find-new-lessons stage selected](visualization.png)
+
+The same page is a full editor. You can create, rename, duplicate, delete and reorder
+stages (drag a stage by its grip handle in the sidebar, or focus the handle and use Space
+and the arrow keys), choose their dependencies and output schemas, edit prompts and the goal right on the page in a Markdown editor (no edit mode: type and it is a change),
+change a stage's state by clicking its badge (moving it to waiting or failed asks for the
+reason in a dialog), edit outputs, edit the schemas in a visual field editor (or as YAML next to it), and change the flow name and the
+revision. A floating **Save** button appears as soon as something changes, and the page lists
+every problem that would make the flow invalid before you can save it. Text you click into but do not change keeps its original markup.
+
+![Editing a stage in the Markdown editor, with the floating Save button](editor.png)
+
+Output schemas are written in a simplified JSON Schema (`string`, `integer`, `number`,
+`boolean`, `array`, `object`, plus `required` and `enum`). The Schemas tab edits them in a
+visual field editor, next to the YAML source; either side updates the other.
+
+![The visual schema editor beside the YAML definition](schema-editor.png)
+
+**New flow** starts a blank flow in the page; the first **Save** asks where to put the file.
+
+**Saving.** Every save writes the next revision, like any script command, so an agent that
+still holds the previous revision is rejected instead of overwriting your changes.
+
+- In Chromium-based browsers (Chrome, Edge, Arc, Brave) **Open file** gives the page access
+  to the file, so **Save** writes into it in place. The page remembers the last file you
+  opened or saved: reloading the page re-reads it, so you can watch a run by reloading. (The
+  browser may ask permission again after a reload; the start screen then offers **Reopen**.)
+  If the file changed on disk since you opened it, saving asks whether to reload, save a
+  copy or overwrite.
+- In other browsers (Firefox, Safari) **Open file** loads the file for viewing and editing,
+  and **Save** downloads it; put it in place of the original. Open the file again to see
+  newer progress.
+
+Limits: comments in a hand-written YAML file are not preserved when the page saves it,
+exactly as when the scripts rewrite it.
 
 ### Validate a flow file
 
@@ -104,20 +148,23 @@ schemas:
       type: object
       properties:
         file:
-          type: str
+          type: string
         vendor:
-          type: str
+          type: string
         amount:
-          type: float
+          type: number
+      required: [file, vendor, amount]
   category-list:
     type: array
     items:
       type: object
       properties:
         file:
-          type: str
+          type: string
         category:
-          type: str
+          type: string
+          enum: [utilities, travel, software, other]
+      required: [file, category]
 
 stages:
   - name: find-invoices

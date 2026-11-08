@@ -1,0 +1,58 @@
+[
+  {
+    "value": "abc",
+    "repr": "'abc'"
+  },
+  {
+    "value": "it's",
+    "repr": "\"it's\""
+  },
+  {
+    "value": "say \"hi\"",
+    "repr": "'say \"hi\"'"
+  },
+  {
+    "value": "both ' and \"",
+    "repr": "'both \\' and \"'"
+  },
+  {
+    "value": "a\nb",
+    "repr": "'a\\nb'"
+  },
+  {
+    "value": "tab\t",
+    "repr": "'tab\\t'"
+  },
+  {
+    "value": "back\\slash",
+    "repr": "'back\\\\slash'"
+  },
+  {
+    "value": "\u043a\u043b\u044e\u0447",
+    "repr": "'\u043a\u043b\u044e\u0447'"
+  },
+  {
+    "value": "\u0000",
+    "repr": "'\\x00'"
+  },
+  {
+    "value": "\u007f",
+    "repr": "'\\x7f'"
+  },
+  {
+    "value": "\u00a0",
+    "repr": "'\\xa0'"
+  },
+  {
+    "value": "\u200b",
+    "repr": "'\\u200b'"
+  },
+  {
+    "value": "\ud83d\ude00",
+    "repr": "'\ud83d\ude00'"
+  },
+  {
+    "value": "",
+    "repr": "''"
+  }
+]

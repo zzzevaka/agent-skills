@@ -1,0 +1,169 @@
+[
+  {
+    "definition": {
+      "type": "string"
+    },
+    "text": "  hi  ",
+    "result": {
+      "ok": "hi"
+    }
+  },
+  {
+    "definition": {
+      "type": "string"
+    },
+    "text": "\u0085hi\u001f",
+    "result": {
+      "ok": "hi"
+    }
+  },
+  {
+    "definition": {
+      "type": "string"
+    },
+    "text": "\ufeffhi",
+    "result": {
+      "ok": "\ufeffhi"
+    }
+  },
+  {
+    "definition": {
+      "type": "integer"
+    },
+    "text": "42",
+    "result": {
+      "ok": 42
+    }
+  },
+  {
+    "definition": {
+      "type": "integer"
+    },
+    "text": "3.0",
+    "result": {
+      "ok": 3.0
+    }
+  },
+  {
+    "definition": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "text": "```json\n[\"a\"]\n```",
+    "result": {
+      "ok": [
+        "a"
+      ]
+    }
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "a"
+      ]
+    },
+    "text": "{\"a\": 1}",
+    "result": {
+      "ok": {
+        "a": 1
+      }
+    }
+  },
+  {
+    "definition": {
+      "type": "integer"
+    },
+    "text": "abc",
+    "result": {
+      "error": "could not parse output as JSON: ",
+      "prefix_only": true
+    }
+  },
+  {
+    "definition": {
+      "type": "integer"
+    },
+    "text": "\"x\"",
+    "result": {
+      "error": "(root): expected integer, got str",
+      "prefix_only": false
+    }
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "a"
+      ]
+    },
+    "text": "{}",
+    "result": {
+      "error": "a: required field is missing",
+      "prefix_only": false
+    }
+  },
+  {
+    "definition": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "integer"
+        }
+      }
+    },
+    "text": "{}",
+    "result": {
+      "ok": {}
+    }
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b"
+      ]
+    },
+    "text": "  a ",
+    "result": {
+      "ok": "a"
+    }
+  },
+  {
+    "definition": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b"
+      ]
+    },
+    "text": "c",
+    "result": {
+      "error": "(root): expected one of \"a\", \"b\", got \"c\"",
+      "prefix_only": false
+    }
+  },
+  {
+    "definition": {
+      "type": "str"
+    },
+    "text": "x",
+    "result": {
+      "error": "could not parse output as JSON: ",
+      "prefix_only": true
+    }
+  }
+]

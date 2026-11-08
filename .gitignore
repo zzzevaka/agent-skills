@@ -2,3 +2,10 @@ __pycache__/
 *.py[cod]
 *.lock
 .ruff_cache/
+
+.superpowers/
+node_modules/
+src/durable-flow/ui/.roundtrip/
+src/durable-flow/ui/test-results/
+src/durable-flow/ui/playwright-report/
+src/durable-flow/ui/.preview/

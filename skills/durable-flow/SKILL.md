@@ -42,9 +42,10 @@ when running the commands below.
 ## Constraints
 
 - After initialization, use `scripts/state_management.py` for every state read
-  or transition, `scripts/visualize.py` to render it for the user, and
-  `scripts/validate.py` to check it. Do not read or edit the flow file
-  directly.
+  or transition, and `scripts/validate.py` to check it. To show or edit a flow in
+  a UI, give the user the viewer page (see
+  [Show or edit the flow](#show-or-edit-the-flow)). Do not read or edit the flow
+  file directly.
 - Run the script as documented; do not inspect or modify its implementation.
 
 ## Flow model
@@ -73,8 +74,13 @@ The stage also holds runtime fields:
 - `output`: the current intermediate or final result.
 - `message`: a status explanation, such as why the stage is waiting.
 
-When `output_schema` is omitted, the output is treated as a string. Schemas support
-`str`, `int`, `float`, `bool`, `array`, and `object`, including nested values.
+When `output_schema` is omitted, the output is treated as a string. A schema is a
+simplified JSON Schema: `type` is `string`, `integer`, `number`, `boolean`, `array`
+(with `items`) or `object` (with `properties`), nested as deeply as needed. Besides
+`description` and `examples`, an object lists its mandatory fields in `required`
+(the other fields are optional, and extra fields are allowed), and a string, integer
+or number may limit its values with `enum`. No other keyword is supported, and the old
+names `str`, `int`, `float` and `bool` are rejected.
 The stage input is derived from its dependencies when `get_flow` is called; it
 is not copied into the flow state. Outputs are checked only when a stage is
 finished.
@@ -117,21 +123,31 @@ such as `get_flow` do not need a revision.
 In the examples below, replace `7` with the latest revision returned by
 `get_flow`.
 
-### Visualize the flow
+### Show or edit the flow
 
-When the user asks to see, show, or visualize a flow, render it as HTML:
+When the user asks to see, show, visualize, or edit a flow, or to create one in a
+UI, point them to the viewer page. There is nothing to run: the page is a single
+static HTML file that works offline,
+[`assets/flow-ui.html`](assets/flow-ui.html) in this skill's directory (resolve it
+relative to this `SKILL.md`). Tell the user its absolute path and what to do:
 
-```bash
-scripts/visualize.py -p "path/to/the/flow.json"
-```
+1. Open the file in a browser (for example `open "<path>"` on macOS).
+2. Click **Open file** and choose the flow file. **New flow** starts a blank
+   flow instead.
 
-The script is read-only. It writes `<flow-file-stem>.html` to the current
-working directory (pass `-o path/to/page.html` to choose another location) and
-prints the absolute path of the page. The page is self-contained and shows the
-goal, stage order, dependencies, and every stage's status; selecting a stage
-shows its prompt, message, input, and output. Give the user the printed path.
-The page is a snapshot: run the script again to refresh it after the flow
-changes.
+The page shows the goal, progress, stage graph, every stage's prompt, state,
+input and output, and the schemas, and it is a full editor: the user can change
+the name, goal, stages (including drag-and-drop reordering), schemas, states,
+and revision, and a Save button appears when something has changed.
+
+- In Chromium-based browsers (Chrome, Edge, Arc, Brave) the page saves into the
+  opened file in place and remembers it: reloading the page re-reads it (the
+  browser may ask permission again first). Other browsers open the file for
+  viewing and editing, and Save downloads a copy to put in its place.
+- Every save from the page increments `revision`, like a script command does.
+  After the user says they saved changes, run `get_flow` again and use the new
+  revision; never reuse an older one.
+- Run `scripts/validate.py` on a file the user saved if anything looks off.
 
 ### Start the next stage
 

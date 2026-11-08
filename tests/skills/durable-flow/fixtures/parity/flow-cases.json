@@ -1,0 +1,948 @@
+[
+  {
+    "label": "reference json is valid",
+    "input": {
+      "name": "Greeting flow",
+      "goal": "Greet a person after their name is available.",
+      "stages": [
+        {
+          "name": "get-name",
+          "prompt": "Obtain the user's name and return it as plain text. Pause only if an answer from the user is required."
+        },
+        {
+          "name": "say-hello",
+          "prompt": "Write a greeting using the name in the input.",
+          "depends_on": [
+            "get-name"
+          ]
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "reference yaml is valid",
+    "input": {
+      "name": "spanish-lessons",
+      "goal": "Keep the Spanish lesson summaries up to date. Find the lessons in the shared\ntranscription document that have not been summarized yet and store one\nsummary document per lesson in DocuMur project \"Spanish Lessons\" (ID <project-id>).\n\nUse the DocuMur MCP tools (list_documents, get_document, create_document,\nedit_document, media__download_file_by_url, media__get_file).\n\nThere is no human in the loop. If you need user input, pause the flow with a question.\n",
+      "stages": [
+        {
+          "name": "find-last-processed-lesson",
+          "prompt": "Find the last processed lesson in DocuMur project <project-id>.\n\nLesson summary documents are named by the lesson date, formatted\nYYYY-MM-DD. List the documents in the project with list_documents and\npick the one with the latest date in its name.\n\nReturn:\n  - document_id: the ID of that document.\n  - lesson_date: its date, formatted YYYY-MM-DD.\n",
+          "depends_on": [],
+          "output_schema": "last-processed-lesson"
+        },
+        {
+          "name": "find-new-lessons",
+          "prompt": "Download the file <transcription-document-url>\nwith media__download_file_by_url and read it with media__get_file.\n\nThe file contains Spanish lesson materials. Find the lessons that are\nnewer than the last processed lesson from the input. Start reading from\nthe end of the file so you don't process the whole history.\n\nReturn:\n  - media_file_id: the media file ID used to read the transcription.\n  - new_lessons: the new lessons, oldest first, each with:\n    - lesson_date: the lesson date, formatted YYYY-MM-DD.\n    - start_row: the row where the lesson starts in the transcription.\n    - end_row: the row where the lesson ends in the transcription.\n\nIf there are no new lessons, return an empty new_lessons list.\n",
+          "depends_on": [
+            "find-last-processed-lesson"
+          ],
+          "output_schema": "new-lessons"
+        },
+        {
+          "name": "create-lesson-summaries",
+          "prompt": "Prepare a summary of every lesson in the input's new_lessons and store\neach one as a document in project <project-id>.\n\nIf new_lessons is empty, finish the stage with an empty list.\n\nProcess the lessons one at a time, oldest first. After storing a lesson,\nsave the list of processed lesson dates as the stage output. When the\nstage resumes, skip the lessons already listed in the saved output.\n\nFor each lesson:\n\nSOURCE\nThe lesson transcription is in the media file `media_file_id`, between\nthe lesson's start_row and end_row. Read only that range.\n\nTARGET DOCUMENT\n- The document name is the lesson date, formatted exactly YYYY-MM-DD.\n- If a document with that name already exists in the project, EDIT it.\n  Never create a second document for the same date.\n- Before writing, read one existing lesson summary in the project so\n  your output matches the established house style.\n\nSTRUCTURE\nUse exactly these markdown sections, in this order. Omit a whole section\nonly when the lesson genuinely contains nothing for it.\n\n# Lesson <YYYY-MM-DD>\n\n## New Grammar\nOne bullet per grammar point taught in this lesson. State the rule, then\ngive the lesson's own example in Spanish.\n\n## New Vocabulary\nOne bullet per new non-verb word or phrase, formatted `word \u2014 English\nmeaning`. Include the article for nouns (el / la). No verbs here.\n\n## New Verbs\nOne `###` subsection per new verb, titled with the infinitive, each\nfollowed by a conjugation table.\n\nVERB TABLE RULES \u2014 follow these exactly; this is the part most often\ndone wrong:\n- Columns, in this order:\n  | pronoun | presente | pret\u00e9rito indefinido | imperfecto | futuro | presente de subjuntivo |\n- Rows, in this order: yo, t\u00fa, \u00e9l/ella/usted, nosotros, vosotros,\n  ellos/ellas/ustedes\n- FILL EVERY CELL. Supply the complete conjugation from your own\n  knowledge of Spanish grammar. Do NOT leave a cell blank merely because\n  that form did not appear in the lesson. A table with empty cells is a\n  failed lesson.\n- Mark irregular forms with a trailing asterisk, e.g. `hago*`.\n- The infinitive belongs in the `###` heading, not in a table column.\n\nThe conjugation tables are reference material produced from standard\nSpanish grammar \u2014 they are deliberately NOT extracted from the\ntranscription. Only the grammar points and the vocabulary must come from\nthis lesson.\n\nWHAT COUNTS AS NEW\nA word, phrase or verb is new when this lesson introduces, corrects or\nexplains it. Do not pad the summary with words merely used in passing.\n\nReturn the list of processed lesson dates, formatted YYYY-MM-DD.\n\nKeep documents sorted by date.\n\nRun lesson processing in parallel using sub-agents.\n",
+          "depends_on": [
+            "find-new-lessons"
+          ],
+          "output_schema": "processed-lessons"
+        }
+      ],
+      "schemas": {
+        "last-processed-lesson": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string"
+            },
+            "lesson_date": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "document_id",
+            "lesson_date"
+          ]
+        },
+        "new-lessons": {
+          "type": "object",
+          "properties": {
+            "media_file_id": {
+              "type": "string"
+            },
+            "new_lessons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "lesson_date": {
+                    "type": "string"
+                  },
+                  "start_row": {
+                    "type": "integer"
+                  },
+                  "end_row": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "lesson_date",
+                  "start_row",
+                  "end_row"
+                ]
+              }
+            }
+          },
+          "required": [
+            "media_file_id",
+            "new_lessons"
+          ]
+        },
+        "processed-lessons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "flow is not an object",
+    "input": [],
+    "expected_errors": [
+      "flow file must contain an object"
+    ]
+  },
+  {
+    "label": "flow is a string",
+    "input": "x",
+    "expected_errors": [
+      "flow file must contain an object"
+    ]
+  },
+  {
+    "label": "typos are reported together with invariant errors",
+    "input": {
+      "name": "typos",
+      "goal": "Find every mistake at once",
+      "shemas": {},
+      "stages": [
+        {
+          "name": "first",
+          "prompt": "Do it.",
+          "output_shema": "result"
+        },
+        {
+          "name": "second",
+          "prompt": "Then.",
+          "depends_on": [
+            "missing"
+          ]
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow has unknown key 'shemas'",
+      "stage 'first' has unknown key 'output_shema'",
+      "stage 'second' depends on 'missing', which must be a previous stage"
+    ]
+  },
+  {
+    "label": "unknown key on stage without a name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "prompt": "p",
+          "foo": 1
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 0 has unknown key 'foo'",
+      "missing key 'name'"
+    ]
+  },
+  {
+    "label": "duplicate stage",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        },
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' is duplicated"
+    ]
+  },
+  {
+    "label": "duplicate stage with quote",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "it's",
+          "prompt": "p"
+        },
+        {
+          "name": "it's",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage \"it's\" is duplicated"
+    ]
+  },
+  {
+    "label": "forward dependency",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "depends_on": [
+            "b"
+          ]
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' depends on 'b', which must be a previous stage"
+    ]
+  },
+  {
+    "label": "self dependency",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' depends on 'a', which must be a previous stage"
+    ]
+  },
+  {
+    "label": "repeated dependency",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        },
+        {
+          "name": "b",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "a"
+          ]
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'b' repeats a dependency"
+    ]
+  },
+  {
+    "label": "missing dependency with non-ascii name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "depends_on": [
+            "\u043a\u043b\u044e\u0447"
+          ]
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' depends on '\u043a\u043b\u044e\u0447', which must be a previous stage"
+    ]
+  },
+  {
+    "label": "unknown output schema",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "output_schema": "nope"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' references unknown output schema 'nope'"
+    ]
+  },
+  {
+    "label": "output schema not a string",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "output_schema": 5
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' output_schema must be a string"
+    ]
+  },
+  {
+    "label": "known output schema",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "output_schema": "s"
+        }
+      ],
+      "schemas": {
+        "s": {
+          "type": "string"
+        }
+      }
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "flow name of only a control char",
+    "input": {
+      "name": "\u001f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow name must be a non-empty string"
+    ]
+  },
+  {
+    "label": "flow name of only a next-line char",
+    "input": {
+      "name": "\u0085",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow name must be a non-empty string"
+    ]
+  },
+  {
+    "label": "flow name of only a byte order mark",
+    "input": {
+      "name": "\ufeff",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "stage name of only a control char",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "\u001f",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage names must be non-empty strings"
+    ]
+  },
+  {
+    "label": "stage name of only a byte order mark",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "\ufeff",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "empty flow name",
+    "input": {
+      "name": "",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow name must be a non-empty string"
+    ]
+  },
+  {
+    "label": "whitespace flow name",
+    "input": {
+      "name": "   ",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow name must be a non-empty string"
+    ]
+  },
+  {
+    "label": "null flow name",
+    "input": {
+      "name": null,
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow name must be a non-empty string"
+    ]
+  },
+  {
+    "label": "empty stage name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage names must be non-empty strings"
+    ]
+  },
+  {
+    "label": "numeric stage name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": 5,
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage names must be non-empty strings"
+    ]
+  },
+  {
+    "label": "no stages",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": []
+    },
+    "expected_errors": [
+      "flow must contain at least one stage"
+    ]
+  },
+  {
+    "label": "negative revision",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "revision": -1
+    },
+    "expected_errors": [
+      "flow revision must be a non-negative integer"
+    ]
+  },
+  {
+    "label": "boolean revision",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "revision": true
+    },
+    "expected_errors": [
+      "flow revision must be a non-negative integer"
+    ]
+  },
+  {
+    "label": "string revision",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "revision": "1"
+    },
+    "expected_errors": [
+      "flow revision must be a non-negative integer"
+    ]
+  },
+  {
+    "label": "valid revision",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "revision": 7
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "missing goal",
+    "input": {
+      "name": "f",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "missing key 'goal' (formerly 'prompt')"
+    ]
+  },
+  {
+    "label": "null goal",
+    "input": {
+      "name": "f",
+      "goal": null,
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "missing key 'goal' (formerly 'prompt')"
+    ]
+  },
+  {
+    "label": "numeric goal",
+    "input": {
+      "name": "f",
+      "goal": 5,
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "flow goal must be a string"
+    ]
+  },
+  {
+    "label": "missing name",
+    "input": {
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "missing key 'name'"
+    ]
+  },
+  {
+    "label": "missing stages",
+    "input": {
+      "name": "f",
+      "goal": "g"
+    },
+    "expected_errors": [
+      "missing key 'stages'"
+    ]
+  },
+  {
+    "label": "missing stage prompt",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a"
+        }
+      ]
+    },
+    "expected_errors": [
+      "missing key 'prompt'"
+    ]
+  },
+  {
+    "label": "missing stage name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": [
+      "missing key 'name'"
+    ]
+  },
+  {
+    "label": "numeric stage prompt",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": 5
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' prompt must be a string"
+    ]
+  },
+  {
+    "label": "bad state",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "foo"
+        }
+      ]
+    },
+    "expected_errors": [
+      "invalid stage state: 'foo' is not a valid StageState"
+    ]
+  },
+  {
+    "label": "bad state beats missing name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "prompt": "p",
+          "state": "foo"
+        }
+      ]
+    },
+    "expected_errors": [
+      "invalid stage state: 'foo' is not a valid StageState"
+    ]
+  },
+  {
+    "label": "legacy prompt key as goal",
+    "input": {
+      "name": "f",
+      "prompt": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "goal wins over legacy prompt",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "prompt": "old",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "legacy finished stage message",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "finished",
+          "message": "done"
+        }
+      ]
+    },
+    "expected_errors": []
+  },
+  {
+    "label": "schemas not an object",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "schemas": []
+    },
+    "expected_errors": [
+      "'schemas' must be an object"
+    ]
+  },
+  {
+    "label": "invalid schema definition",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "schemas": {
+        "x": {
+          "type": "nope"
+        }
+      }
+    },
+    "expected_errors": [
+      "schemas.x: unknown schema type 'nope'"
+    ]
+  },
+  {
+    "label": "old schema type name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "schemas": {
+        "x": {
+          "type": "str"
+        }
+      }
+    },
+    "expected_errors": [
+      "schemas.x: unknown schema type 'str'; use 'string'"
+    ]
+  },
+  {
+    "label": "required names a missing property",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "schemas": {
+        "x": {
+          "type": "object",
+          "properties": {},
+          "required": [
+            "a"
+          ]
+        }
+      }
+    },
+    "expected_errors": [
+      "schemas.x.required: 'a' is not in properties"
+    ]
+  },
+  {
+    "label": "empty schema name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ],
+      "schemas": {
+        "": {
+          "type": "string"
+        }
+      }
+    },
+    "expected_errors": [
+      "schema names must be non-empty strings"
+    ]
+  },
+  {
+    "label": "stage is not an object",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        1
+      ]
+    },
+    "expected_errors": [
+      "stage 0 must be an object"
+    ]
+  },
+  {
+    "label": "depends_on is not a list",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "depends_on": "b"
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' 'depends_on' must be a list of names"
+    ]
+  },
+  {
+    "label": "depends_on item not a string",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "depends_on": [
+            1
+          ]
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 'a' 'depends_on' must be a list of names"
+    ]
+  },
+  {
+    "label": "depends_on invalid without a name",
+    "input": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "prompt": "p",
+          "depends_on": 1
+        }
+      ]
+    },
+    "expected_errors": [
+      "stage 0 'depends_on' must be a list of names"
+    ]
+  }
+]
