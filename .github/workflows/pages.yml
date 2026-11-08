@@ -1,0 +1,48 @@
+name: Deploy viewer to GitHub Pages
+
+# Publishes the committed single-file viewer (skills/structured-flow/assets/flow-ui.html).
+# CI already checks that this file is up to date with the UI sources, so no build is needed here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - skills/structured-flow/assets/flow-ui.html
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Stage the site
+        run: |
+          mkdir _site
+          cp skills/structured-flow/assets/flow-ui.html _site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
