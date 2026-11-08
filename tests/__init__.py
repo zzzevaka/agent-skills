@@ -1,1 +1,1 @@
-"""Unit tests for the durable-flow skill."""
+"""Unit tests for the structured-flow skill."""

@@ -1,5 +1,5 @@
 {
-  "name": "durable-flow",
+  "name": "structured-flow",
   "version": "0.1.0",
   "description": "A collection of reusable Agent Skills for AI coding assistants.",
   "skills": "./skills/"

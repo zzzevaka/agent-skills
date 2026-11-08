@@ -1,5 +1,5 @@
 {
-  "name": "durable-flow-marketplace",
+  "name": "structured-flow-marketplace",
   "owner": {
     "name": "Leonid Maksimov"
   },
@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "durable-flow",
+      "name": "structured-flow",
       "description": "A collection of reusable Agent Skills for AI coding assistants.",
       "version": "0.1.0",
       "source": "./"

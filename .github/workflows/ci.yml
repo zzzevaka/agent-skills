@@ -32,7 +32,7 @@ jobs:
         run: poetry run python -m pip install pyyaml
 
       - name: Run tests
-        run: poetry run python -m unittest discover -s tests/skills/durable-flow -v
+        run: poetry run python -m unittest discover -s tests/skills/structured-flow -v
 
   ui:
     runs-on: ubuntu-latest
@@ -45,19 +45,19 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: src/durable-flow/ui/package-lock.json
+          cache-dependency-path: src/structured-flow/ui/package-lock.json
 
       - name: Install UI dependencies
         run: npm ci
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Typecheck the UI
         run: npx tsc --noEmit
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Run UI tests
         run: npm test
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -69,23 +69,23 @@ jobs:
 
       - name: Check files written by the UI with the Python implementation
         run: |
-          python tests/skills/durable-flow/check_roundtrip.py src/durable-flow/ui/.roundtrip
-          for f in src/durable-flow/ui/.roundtrip/*.json src/durable-flow/ui/.roundtrip/*.yaml; do
+          python tests/skills/structured-flow/check_roundtrip.py src/structured-flow/ui/.roundtrip
+          for f in src/structured-flow/ui/.roundtrip/*.json src/structured-flow/ui/.roundtrip/*.yaml; do
             case "$f" in *.expected.json) continue ;; esac
-            python skills/durable-flow/scripts/validate.py -p "$f"
+            python skills/structured-flow/scripts/validate.py -p "$f"
           done
 
       - name: Build the viewer
         run: npm run build
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Install Chromium for the browser tests
         run: npx playwright install --with-deps chromium
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Run browser smoke tests
         run: npm run e2e
-        working-directory: src/durable-flow/ui
+        working-directory: src/structured-flow/ui
 
       - name: Check the committed viewer is up to date
-        run: git diff --exit-code skills/durable-flow/assets/flow-ui.html
+        run: git diff --exit-code skills/structured-flow/assets/flow-ui.html

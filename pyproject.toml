@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "durable-flow"
+name = "structured-flow"
 version = "0.1.0"
 description = "An Agent Skills skill for durable multi-stage workflows"
 package-mode = false
@@ -13,7 +13,7 @@ ruff = "^0.16.8"
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-src = ["skills/durable-flow/scripts", "tests/skills/durable-flow"]
+src = ["skills/structured-flow/scripts", "tests/skills/structured-flow"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]
