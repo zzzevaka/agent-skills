@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { setStageFields } from "../domain/ops";
+import { computeStatuses } from "../domain/status";
 import type { Flow, Stage, StageState } from "../domain/types";
 import { useFlowStoreApi } from "../store/flowStore";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ interface Props {
 export function StageDetail({ flow, stage, index }: Props) {
   const store = useFlowStoreApi();
   const actions = useStageActions();
+  const status = computeStatuses(flow.stages)[index];
 
   const [asking, setAsking] = useState<{ state: ReasonState; editing: boolean } | null>(null);
   const apply = (fields: Parameters<typeof setStageFields>[2]) =>
@@ -57,7 +59,7 @@ export function StageDetail({ flow, stage, index }: Props) {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <StateMenu state={stage.state} onChoose={chooseState} />
+          <StateMenu status={status} onChoose={chooseState} />
           <StageToolbar flow={flow} stage={stage} />
         </div>
       </div>

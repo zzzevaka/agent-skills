@@ -34,6 +34,24 @@ describe("ProgressSummary", () => {
     expect(inProgress.className).toContain("bg-status-inprogress");
   });
 
+  it("counts_ready_and_blocked_pending_stages_separately_in_display_order", () => {
+    renderSummary([
+      { name: "a", prompt: "p", state: "finished", output: "x" },
+      { name: "b", prompt: "p", depends_on: ["a"] },
+      { name: "c", prompt: "p", depends_on: ["b"] },
+      { name: "d", prompt: "p", state: "waiting", message: "review" },
+    ]);
+    const titles = Array.from(screen.getByTestId("progress").children).map((c) => c.getAttribute("title"));
+    expect(titles).toEqual([
+      "Finished: 1",
+      "Waiting: 1",
+      "Ready to start: 1",
+      "Waiting for dependencies: 1",
+    ]);
+    const ready = screen.getByTitle("Ready to start: 1");
+    expect(ready.className).toContain("bg-status-ready");
+  });
+
   it("shows_nothing_for_a_flow_without_stages", () => {
     const { container } = renderSummary([]);
     expect(container).toBeEmptyDOMElement();

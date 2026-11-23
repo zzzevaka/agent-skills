@@ -1,5 +1,5 @@
 import { Braces, LayoutDashboard, Plus } from "lucide-react";
-import type { StageState } from "../domain/types";
+import type { StageStatus } from "../domain/types";
 import { usedBy } from "../domain/ops";
 import { useFlowStore } from "@/store/flowStore";
 import { cn } from "@/lib/utils";
@@ -28,12 +28,12 @@ import { SortableStageList } from "./SortableStageList";
 import { STATE_BG } from "./states";
 import { ThemeToggle } from "./ThemeToggle";
 
-export function StatusDot({ state, className }: { state: StageState; className?: string }) {
+export function StatusDot({ status, className }: { status: StageStatus; className?: string }) {
   return (
     <span
       aria-hidden="true"
-      data-state={state}
-      className={cn("size-2 shrink-0 rounded-full", STATE_BG[state], className)}
+      data-state={status}
+      className={cn("size-2 shrink-0 rounded-full", STATE_BG[status], className)}
     />
   );
 }

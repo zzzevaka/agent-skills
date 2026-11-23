@@ -16,6 +16,7 @@ SCRIPTS_DIRECTORY = (
 sys.path.insert(0, str(SCRIPTS_DIRECTORY))
 
 from lib.exceptions import ValidationError  # noqa: E402
+from lib.repositories import parse_flow  # noqa: E402
 from lib.schema import SchemaDef, _validate_value  # noqa: E402
 from validate import find_errors  # noqa: E402
 
@@ -344,6 +345,55 @@ def build_flow_cases() -> list[dict]:
     ]
 
 
+def _diamond(**states: str) -> dict:
+    """a and b are roots, c needs a, d needs a and b; `states` sets stored states."""
+    stages = [
+        _stage("a"),
+        _stage("b"),
+        _stage("c", depends_on=["a"]),
+        _stage("d", depends_on=["a", "b"]),
+    ]
+    for stage in stages:
+        if stage["name"] in states:
+            stage["state"] = states[stage["name"]]
+    return _flow(stages=stages)
+
+
+STATUS_CASES: list[tuple[str, dict]] = [
+    ("all pending diamond", _diamond()),
+    ("one root finished", _diamond(a="finished")),
+    ("both roots finished", _diamond(a="finished", b="finished")),
+    ("failed dependency blocks only its dependents", _diamond(a="failed")),
+    ("waiting dependency blocks its dependents", _diamond(a="waiting")),
+    ("inprogress dependency blocks its dependents", _diamond(a="inprogress")),
+    (
+        "finished stage with an unfinished dependency stays finished",
+        _flow(stages=[_stage("a"), _stage("b", depends_on=["a"], state="finished")]),
+    ),
+    (
+        "stored non-pending states keep their names",
+        _flow(
+            stages=[
+                _stage("a", state="inprogress"),
+                _stage("b", state="waiting"),
+                _stage("c", state="finished"),
+                _stage("d", state="failed"),
+            ]
+        ),
+    ),
+    ("stage without dependencies is ready", _flow()),
+]
+
+
+def build_status_cases() -> list[dict]:
+    cases = []
+    for label, raw in STATUS_CASES:
+        flow = parse_flow(raw)
+        statuses = {stage.name: flow.status_of(stage).value for stage in flow.stages}
+        cases.append({"label": label, "flow": raw, "statuses": statuses})
+    return cases
+
+
 def build_repr_cases() -> list[dict]:
     return [{"value": value, "repr": repr(value)} for value in REPR_STRINGS]
 
@@ -357,6 +407,7 @@ def main() -> None:
     (FIXTURES / "schema-cases.json").write_text(_dump(build_schema_cases()))
     (FIXTURES / "schema-parse-cases.json").write_text(_dump(build_parse_cases()))
     (FIXTURES / "flow-cases.json").write_text(_dump(build_flow_cases()))
+    (FIXTURES / "status-cases.json").write_text(_dump(build_status_cases()))
     (FIXTURES / "pyrepr.json").write_text(_dump(build_repr_cases()))
 
 

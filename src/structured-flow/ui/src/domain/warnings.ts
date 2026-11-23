@@ -38,7 +38,7 @@ export function runtimeWarnings(flow: Flow): Warning[] {
   const warnings: Warning[] = [];
   const state = new Map(flow.stages.map((s) => [s.name, s.state]));
 
-  flow.stages.forEach((stage, index) => {
+  flow.stages.forEach((stage) => {
     if (stage.state === "finished") {
       for (const dependency of stage.depends_on) {
         if (state.has(dependency) && state.get(dependency) !== "finished") {
@@ -58,22 +58,13 @@ export function runtimeWarnings(flow: Flow): Warning[] {
         });
       }
     }
-    if (stage.state === "pending") {
-      const later = flow.stages.slice(index + 1).find((s) => s.state === "finished");
-      if (later) {
-        warnings.push({
-          stage: stage.name,
-          message: `stage ${pyRepr(stage.name)} is pending but the later stage ${pyRepr(later.name)} is finished`,
-        });
-      }
-    }
   });
 
-  const active = flow.stages.filter((s) => s.state === "inprogress" || s.state === "waiting");
+  const active = flow.stages.filter((s) => s.state === "inprogress");
   if (active.length > 1) {
     warnings.push({
       stage: null,
-      message: `more than one stage is in progress or waiting: ${active
+      message: `more than one stage is in progress: ${active
         .map((s) => pyRepr(s.name))
         .join(", ")}`,
     });

@@ -42,7 +42,7 @@ class FlowRepositoryTests(unittest.TestCase):
             flow = repository.get_flow()
             updated = repository.mutate(
                 flow.revision,
-                lambda current: current.start_next_stage(revision=current.revision),
+                lambda current: current.start_stage(name="work", revision=current.revision),
             )
             reloaded = repository.get_flow()
 
@@ -58,7 +58,7 @@ class FlowRepositoryTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValidationError, "stale revision"):
                 repository.mutate(
-                    1, lambda current: current.start_next_stage(revision=current.revision)
+                    1, lambda current: current.start_stage(name="work", revision=current.revision)
                 )
 
             self.assertEqual(repository.get_flow().revision, 0)
@@ -102,7 +102,7 @@ class FlowRepositoryTests(unittest.TestCase):
             flow = repository.get_flow()
             repository.mutate(
                 flow.revision,
-                lambda current: current.start_next_stage(revision=current.revision),
+                lambda current: current.start_stage(name="work", revision=current.revision),
             )
             reloaded = repository.get_flow()
 

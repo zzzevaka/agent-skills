@@ -30,6 +30,7 @@ export default {
         ring: "hsl(var(--ring))",
         status: {
           pending: "hsl(var(--status-pending))",
+          ready: "hsl(var(--status-ready))",
           inprogress: "hsl(var(--status-inprogress))",
           waiting: "hsl(var(--status-waiting))",
           finished: "hsl(var(--status-finished))",

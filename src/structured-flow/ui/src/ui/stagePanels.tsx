@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { outputFromText, outputToText } from "../domain/output";
 import { addDependencyToFollowing, addSchema, dependentsOf, newSchemaName, resetFrom, resetStage, setDependencies, setOutputSchema, setStageFields } from "../domain/ops";
 import { toYaml } from "../domain/serialize";
+import { computeStatuses } from "../domain/status";
 import type { Flow, Stage } from "../domain/types";
 import { outputProblem, schemaFor } from "../domain/warnings";
 import { useFlowStoreApi } from "../store/flowStore";
@@ -41,10 +42,12 @@ function Section({
 }
 
 function Chips({ flow, names }: { flow: Flow; names: string[] }) {
+  const statuses = computeStatuses(flow.stages);
   return (
     <div className="flex flex-wrap gap-2">
       {names.map((name) => {
-        const state = flow.stages.find((s) => s.name === name)?.state ?? "pending";
+        // An unknown stage counts as blocked.
+        const state = statuses[flow.stages.findIndex((s) => s.name === name)] ?? "waiting_for_dependencies";
         return (
           <Button
             key={name}

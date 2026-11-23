@@ -35,6 +35,7 @@
     --input: 0 0% 90%;
     --ring: 0 0% 20%;
     --status-pending: 240 5% 65%;
+    --status-ready: 173 70% 38%;
     --status-inprogress: 217 91% 60%;
     --status-waiting: 38 92% 50%;
     --status-finished: 142 71% 45%;
@@ -72,6 +73,7 @@
     --input: 0 0% 25%;
     --ring: 0 0% 83.1%;
     --status-pending: 240 4% 55%;
+    --status-ready: 172 66% 55%;
     --status-inprogress: 213 94% 68%;
     --status-waiting: 43 96% 56%;
     --status-finished: 142 69% 58%;

@@ -52,6 +52,12 @@ describe("AppSidebar", () => {
     expect(within(schemas()).getByRole("button", { name: /text/ })).toHaveTextContent("unused");
   });
 
+  it("a_pending_stage_without_dependencies_shows_as_ready", () => {
+    setup();
+    // "third" has no dependencies, so it is ready.
+    expect(stageRow("third").querySelector('[data-state="ready_to_start"]')).not.toBeNull();
+  });
+
   it("shows_the_flow_name_revision_and_source_in_the_header", () => {
     setup();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My flow");

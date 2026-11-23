@@ -1,0 +1,312 @@
+[
+  {
+    "label": "all pending diamond",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "ready_to_start",
+      "b": "ready_to_start",
+      "c": "waiting_for_dependencies",
+      "d": "waiting_for_dependencies"
+    }
+  },
+  {
+    "label": "one root finished",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "finished"
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "finished",
+      "b": "ready_to_start",
+      "c": "ready_to_start",
+      "d": "waiting_for_dependencies"
+    }
+  },
+  {
+    "label": "both roots finished",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "finished"
+        },
+        {
+          "name": "b",
+          "prompt": "p",
+          "state": "finished"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "finished",
+      "b": "finished",
+      "c": "ready_to_start",
+      "d": "ready_to_start"
+    }
+  },
+  {
+    "label": "failed dependency blocks only its dependents",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "failed"
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "failed",
+      "b": "ready_to_start",
+      "c": "waiting_for_dependencies",
+      "d": "waiting_for_dependencies"
+    }
+  },
+  {
+    "label": "waiting dependency blocks its dependents",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "waiting"
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "waiting",
+      "b": "ready_to_start",
+      "c": "waiting_for_dependencies",
+      "d": "waiting_for_dependencies"
+    }
+  },
+  {
+    "label": "inprogress dependency blocks its dependents",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "inprogress"
+        },
+        {
+          "name": "b",
+          "prompt": "p"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ]
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "depends_on": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "statuses": {
+      "a": "inprogress",
+      "b": "ready_to_start",
+      "c": "waiting_for_dependencies",
+      "d": "waiting_for_dependencies"
+    }
+  },
+  {
+    "label": "finished stage with an unfinished dependency stays finished",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        },
+        {
+          "name": "b",
+          "prompt": "p",
+          "depends_on": [
+            "a"
+          ],
+          "state": "finished"
+        }
+      ]
+    },
+    "statuses": {
+      "a": "ready_to_start",
+      "b": "finished"
+    }
+  },
+  {
+    "label": "stored non-pending states keep their names",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p",
+          "state": "inprogress"
+        },
+        {
+          "name": "b",
+          "prompt": "p",
+          "state": "waiting"
+        },
+        {
+          "name": "c",
+          "prompt": "p",
+          "state": "finished"
+        },
+        {
+          "name": "d",
+          "prompt": "p",
+          "state": "failed"
+        }
+      ]
+    },
+    "statuses": {
+      "a": "inprogress",
+      "b": "waiting",
+      "c": "finished",
+      "d": "failed"
+    }
+  },
+  {
+    "label": "stage without dependencies is ready",
+    "flow": {
+      "name": "f",
+      "goal": "g",
+      "stages": [
+        {
+          "name": "a",
+          "prompt": "p"
+        }
+      ]
+    },
+    "statuses": {
+      "a": "ready_to_start"
+    }
+  }
+]
