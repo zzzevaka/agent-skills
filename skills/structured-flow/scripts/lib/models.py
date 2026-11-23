@@ -31,6 +31,17 @@ class StageState(StrEnum):
     FAILED = auto()
 
 
+class StageStatus(StrEnum):
+    """What the agent sees: a stored `pending` stage is split by its dependencies."""
+
+    READY_TO_START = auto()
+    WAITING_FOR_DEPENDENCIES = auto()
+    INPROGRESS = auto()
+    WAITING = auto()
+    FINISHED = auto()
+    FAILED = auto()
+
+
 @dataclass(frozen=True, kw_only=True)
 class Stage(StageConfig):
     state: StageState = StageState.PENDING
@@ -101,59 +112,52 @@ class Flow(FlowConfig):
             seen.add(stage.name)
         return errors
 
+    def status_of(self, stage: Stage) -> StageStatus:
+        if stage.state != StageState.PENDING:
+            return StageStatus(stage.state.value)
+        if self._unfinished_dependencies(stage):
+            return StageStatus.WAITING_FOR_DEPENDENCIES
+        return StageStatus.READY_TO_START
+
     def render(self, verbose: bool = False) -> str:
         rendered = asdict(self)
-        if not verbose:
-            active = next(
-                (
-                    i
-                    for i, stage in enumerate(self.stages)
-                    if stage.state in (StageState.INPROGRESS, StageState.WAITING)
-                ),
-                None,
-            )
-            for index, stage_repr in enumerate(rendered["stages"]):
-                if index != active:
-                    stage_repr["prompt"] = "...truncated..."
-                    stage_repr["output"] = "...truncated..."
-                    if stage_repr["state"] != StageState.WAITING:
-                        stage_repr["message"] = None
-            if active is not None:
-                rendered["stages"][active]["input"] = self._resolve_input(self.stages[active])
-        else:
-            active = next(
-                (
-                    i
-                    for i, stage in enumerate(self.stages)
-                    if stage.state in (StageState.INPROGRESS, StageState.WAITING)
-                ),
-                None,
-            )
-            if active is not None:
-                rendered["stages"][active]["input"] = self._resolve_input(self.stages[active])
+        for stage, stage_repr in zip(self.stages, rendered["stages"]):
+            stage_repr["state"] = self.status_of(stage).value
+            if stage.state == StageState.INPROGRESS:
+                stage_repr["input"] = self._resolve_input(stage)
+            elif not verbose:
+                stage_repr["prompt"] = "...truncated..."
+                stage_repr["output"] = "...truncated..."
+                if stage.state != StageState.WAITING:
+                    stage_repr["message"] = None
         return json.dumps(rendered, ensure_ascii=False)
 
-    def start_next_stage(self, *, revision: int) -> Self:
+    def start_stage(self, *, name: str, revision: int) -> Self:
         self._check_revision(revision)
         self.validate_invariants()
-        current = self._get_first_stage_in_state(StageState.PENDING)
-        self._resolve_input(current)
+        stage = self._get_stage_by_name(name)
+        self._require_nothing_inprogress()
+        if stage.state != StageState.PENDING:
+            raise ValidationError(
+                f"stage {name!r} is {stage.state.value}; only a ready_to_start stage "
+                f"can be started.{self._schedule_hint()}"
+            )
+        unfinished = self._unfinished_dependencies(stage)
+        if unfinished:
+            raise ValidationError(
+                f"stage {name!r} is waiting_for_dependencies: {unfinished[0]!r} is not "
+                f"finished.{self._schedule_hint()}"
+            )
         return self._replace_stage(
-            current,
-            revision=revision,
-            state=StageState.INPROGRESS,
-            message=None,
-            output=None,
+            stage, revision=revision, state=StageState.INPROGRESS, message=None, output=None
         )
 
     def set_output(self, *, output: str, revision: int) -> Self:
-        self._check_revision(revision)
-        current = self._get_first_stage_in_state(StageState.INPROGRESS)
-        return self._replace_stage(current, revision=revision, output=output)
+        return self._update_active_stage(revision=revision, output=output)
 
     def finish_stage(self, *, revision: int, output: str | None = None) -> Self:
         self._check_revision(revision)
-        current = self._get_first_stage_in_state(StageState.INPROGRESS)
+        current = self._active_stage()
         candidate = current.output if output is None else output
         if candidate is None:
             raise ValidationError(
@@ -173,18 +177,26 @@ class Flow(FlowConfig):
         )
 
     def fail_stage(self, *, message: str, revision: int) -> Self:
-        return self._update_stage(
-            StageState.INPROGRESS, revision=revision, state=StageState.FAILED, message=message
+        return self._update_active_stage(
+            revision=revision, state=StageState.FAILED, message=message
         )
 
     def pause_stage(self, *, message: str, revision: int) -> Self:
-        return self._update_stage(
-            StageState.INPROGRESS, revision=revision, state=StageState.WAITING, message=message
+        return self._update_active_stage(
+            revision=revision, state=StageState.WAITING, message=message
         )
 
-    def resume_stage(self, *, message: str, revision: int) -> Self:
-        return self._update_stage(
-            StageState.WAITING, revision=revision, state=StageState.INPROGRESS, message=message
+    def resume_stage(self, *, name: str, message: str, revision: int) -> Self:
+        self._check_revision(revision)
+        stage = self._get_stage_by_name(name)
+        self._require_nothing_inprogress()
+        if stage.state != StageState.WAITING:
+            raise ValidationError(
+                f"stage {name!r} is {self.status_of(stage).value}; "
+                "only a waiting stage can be resumed"
+            )
+        return self._replace_stage(
+            stage, revision=revision, state=StageState.INPROGRESS, message=message
         )
 
     def _output_schema(self, stage: Stage) -> SchemaDef:
@@ -214,15 +226,41 @@ class Flow(FlowConfig):
                 return stage
         raise ValidationError(f"there is no stage named {name!r}")
 
-    def _get_first_stage_in_state(self, state: StageState) -> Stage:
+    def _unfinished_dependencies(self, stage: Stage) -> list[str]:
+        finished = {s.name for s in self.stages if s.state == StageState.FINISHED}
+        return [name for name in stage.depends_on if name not in finished]
+
+    def _schedule_hint(self) -> str:
+        ready = [s.name for s in self.stages if self.status_of(s) == StageStatus.READY_TO_START]
+        if ready:
+            return f" Ready to start: {', '.join(ready)}."
+        waiting = [
+            f"{s.name} ({s.message})" for s in self.stages if s.state == StageState.WAITING
+        ]
+        if waiting:
+            return (
+                " Nothing is ready to start; waiting for an outside event: "
+                f"{', '.join(waiting)}."
+            )
+        return ""
+
+    def _active_stage(self) -> Stage:
+        active = [s for s in self.stages if s.state == StageState.INPROGRESS]
+        if not active:
+            raise ValidationError("there is no stage in the inprogress state")
+        if len(active) > 1:
+            names = ", ".join(repr(s.name) for s in active)
+            raise ValidationError(
+                f"more than one stage is inprogress: {names}; fix the flow file in the viewer"
+            )
+        return active[0]
+
+    def _require_nothing_inprogress(self) -> None:
         for stage in self.stages:
-            if stage.state == state:
-                return stage
-            if stage.state == StageState.FAILED:
-                raise ValidationError(f"stage {stage.name!r} has failed")
-            if stage.state in (StageState.INPROGRESS, StageState.WAITING):
-                raise ValidationError(f"stage {stage.name!r} is {stage.state.value}")
-        raise ValidationError(f"there is no stage in the {state.value} state")
+            if stage.state == StageState.INPROGRESS:
+                raise ValidationError(
+                    f"stage {stage.name!r} is already inprogress; pause or finish it first"
+                )
 
     def _check_revision(self, revision: int) -> None:
         if type(revision) is not int or revision != self.revision:
@@ -231,10 +269,9 @@ class Flow(FlowConfig):
                 "Run get_flow and retry with the latest revision."
             )
 
-    def _update_stage(self, state: StageState, /, revision: int, **changes) -> Self:
+    def _update_active_stage(self, *, revision: int, **changes) -> Self:
         self._check_revision(revision)
-        current_stage = self._get_first_stage_in_state(state)
-        return self._replace_stage(current_stage, revision=revision, **changes)
+        return self._replace_stage(self._active_stage(), revision=revision, **changes)
 
     def _replace_stage(self, current: Stage, *, revision: int, **changes) -> Self:
         self._check_revision(revision)

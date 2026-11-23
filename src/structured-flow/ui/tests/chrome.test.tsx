@@ -207,8 +207,16 @@ describe("problems panel", () => {
   });
 
   it("counts_errors_and_warnings_with_plurals", () => {
-    const { edit } = setup({ ...GOOD, stages: [{ name: "a", prompt: "p" }, { name: "b", prompt: "p", depends_on: ["a"] }] });
+    const { edit } = setup({
+      ...GOOD,
+      stages: [
+        { name: "a", prompt: "p" },
+        { name: "b", prompt: "p", depends_on: ["a"] },
+        { name: "c", prompt: "p", depends_on: ["a"] },
+      ],
+    });
     edit((f) => setStageFields(f, "b", { state: "finished", output: "x" }));
+    edit((f) => setStageFields(f, "c", { state: "finished", output: "y" }));
     expect(screen.getByTestId("problems-summary")).toHaveTextContent("2 warnings");
     setup(BAD);
     expect(screen.getAllByTestId("problems-summary").at(-1)).toHaveTextContent("1 error");

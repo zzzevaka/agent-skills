@@ -1,6 +1,6 @@
 ---
 name: structured-flow
-description: Create, run, and resume persistent sequential multi-stage workflows stored in JSON or YAML flow files.
+description: Create, run, and resume persistent multi-stage workflows stored in JSON or YAML flow files.
 ---
 
 # Skill structured-flow
@@ -57,7 +57,7 @@ A flow contains:
 - `name`: the flow name.
 - `goal`: the overall goal shared by the workflow.
 - `schemas`: optional named output schemas.
-- `stages`: stages executed sequentially.
+- `stages`: the workflow stages. Only one runs at a time, and you choose which.
 
 Each stage has a unique `name`, detailed `prompt`, an optional `depends_on`
 list, and an optional `output_schema` name. The flow `goal` is always
@@ -72,7 +72,10 @@ all its stage dependencies have finished successfully.
 
 The stage also holds runtime fields:
 
-- `state`: `pending` | `inprogress` | `waiting` | `finished` | `failed`.
+- `state`: `pending` | `inprogress` | `waiting` | `finished` | `failed` in the
+  file. `get_flow` splits `pending` by the stage's dependencies:
+  `ready_to_start` (all dependencies are finished) or `waiting_for_dependencies`
+  (at least one is not, including a failed one).
 - `output`: the current intermediate or final result.
 - `message`: a status explanation, such as why the stage is waiting.
 
@@ -110,9 +113,10 @@ here; they are validated by `finish_stage`.
 scripts/state_management.py get_flow -p "path/to/the/flow.json"
 ```
 
-The script prints the flow as JSON. In normal mode, only an in-progress or
-waiting stage includes its full prompt, input, and saved output. Other stages'
-prompts and data are truncated. Pass `-v` to inspect the full state.
+The script prints the flow as JSON. In normal mode, only the in-progress stage
+includes its full prompt, input, and saved output. Other stages' prompts and
+data are truncated; a waiting stage still shows its message, which says what it
+waits for. Pass `-v` to inspect the full state.
 Do not read the full state if it is not really required.
 
 The flow includes an integer `revision`. Every successful state-changing
@@ -151,19 +155,36 @@ and revision, and a Save button appears when something has changed.
   revision; never reuse an older one.
 - Run `scripts/validate.py` on a file the user saved if anything looks off.
 
-### Start the next stage
+### Choose and start a stage
 
 ```bash
-scripts/state_management.py start_next_stage -p "path/to/the/flow.json" -r 7
+scripts/state_management.py start_stage -p "path/to/the/flow.json" -r 7 -s "stage-name"
 ```
 
-Stages run sequentially. The command starts the first pending stage whose
-dependencies have completed. Then call `get_flow` to read the overall goal,
-active stage instructions, and dynamically assembled input. Work only on that
-stage, delegating it to a subagent when the agent environment supports
-delegation. Pass the goal, prompt, and input to the subagent. After a pause,
-`get_flow` reconstructs the same input from finished dependencies and shows the
-saved output for resumption.
+Only one stage is `inprogress` at a time, and you choose which one. Call
+`get_flow` and pick:
+
+- a `ready_to_start` stage, started with `start_stage`; or
+- a `waiting` stage whose reason is now resolved, continued with
+  `resume_stage` (see [Pause the current stage](#pause-the-current-stage)).
+
+`start_stage` fails if the stage is not `ready_to_start` or another stage is
+`inprogress`. When the stage is blocked, the error lists the stages that can
+start, or, if none can, the waiting stages and what they wait for. `-s` is
+accepted only by `start_stage` and `resume_stage`. Then call `get_flow`
+to read the overall goal, active stage instructions, and dynamically assembled
+input. Work only on that stage, delegating it to a subagent when the agent
+environment supports delegation. Pass the goal, prompt, and input to the
+subagent. After a pause, `get_flow` reconstructs the same input from finished
+dependencies and shows the saved output for resumption.
+
+Prefer the earliest ready stage in the order of the flow file, and skip ahead
+only past stages that are waiting for an outside event and that the later stage
+does not need. A stage without `depends_on` is ready from the start, so a flow
+author who needs an order declares it with `depends_on`. When a stage pauses and
+other stages are `ready_to_start`, or another waiting stage has been unblocked,
+continue with that work instead of stopping. If no
+stage can run, tell the user what each waiting stage is waiting for and stop.
 
 ### Save intermediate output
 
@@ -183,7 +204,8 @@ specific external condition, such as a user answer or approval, restored
 access, an unavailable resource, or a future result.
 
 Before pausing, save useful partial work with `set_output`. The pause message
-must state both what is awaited and what will allow the stage to resume. For
+must state both what is awaited and what will allow the stage to resume. A
+paused stage can wait for days; meanwhile you can start any other ready stage. For
 example: `Waiting for the transcript export; resume when the export is
 available.`
 
@@ -213,10 +235,11 @@ scripts/state_management.py pause_stage -p "path/to/the/flow.json" -r 7 -m 'wait
 ```
 
 Pausing preserves the stage output. The input is reconstructed from its
-dependencies. Resume a waiting stage with:
+dependencies. Resume a waiting stage by name, once no other stage is
+`inprogress`:
 
 ```bash
-scripts/state_management.py resume_stage -p "path/to/the/flow.json" -r 7 -m 'resume reason'
+scripts/state_management.py resume_stage -p "path/to/the/flow.json" -r 7 -s "stage-name" -m 'resume reason'
 ```
 
 ### Record a failure
@@ -230,10 +253,13 @@ or alter a failed flow from this skill.
 
 ## Guidelines
 
-- Execute stages sequentially; parallel execution is not supported.
+- Keep one stage `inprogress` at a time. You may interleave stages: pause one
+  that is blocked and start another that is ready, then resume the first when
+  it is unblocked. Parallel execution is not supported.
 - If every stage is complete, say so and stop.
 - After initialization, use the scripts for every state transition; do not edit
   the flow file or read the implementation scripts directly.
-- Each stage must have a detailed prompt. Use `depends_on` only for outputs
-  from preceding stages; the overall goal is already available in `get_flow`.
+- Each stage must have a detailed prompt. List in `depends_on` every
+  preceding stage this one needs finished first, whether or not it uses that
+  stage's output; the overall goal is already available in `get_flow`.
 - If output validation fails, correct the output and retry `finish_stage`.

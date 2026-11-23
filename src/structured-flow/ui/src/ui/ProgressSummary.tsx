@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { computeStatuses } from "../domain/status";
 import { useFlowStore } from "../store/flowStore";
 import { cn } from "@/lib/utils";
 import { STATE_BG, STATE_LABELS, STATE_ORDER } from "./states";
@@ -5,10 +7,11 @@ import { STATE_BG, STATE_LABELS, STATE_ORDER } from "./states";
 /** One bar with a segment per present state, and "finished / total" at its right. */
 export function ProgressSummary() {
   const stages = useFlowStore((s) => s.draft.stages);
+  const statuses = useMemo(() => computeStatuses(stages), [stages]);
   if (stages.length === 0) return null;
   const counts = STATE_ORDER.map((state) => ({
     state,
-    count: stages.filter((s) => s.state === state).length,
+    count: statuses.filter((s) => s === state).length,
   })).filter((entry) => entry.count > 0);
   const finished = stages.filter((s) => s.state === "finished").length;
   return (

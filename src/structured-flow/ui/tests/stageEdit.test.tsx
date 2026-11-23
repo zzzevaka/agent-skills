@@ -414,6 +414,33 @@ describe("stage state and reason", () => {
     expect(names.map((b) => b.textContent)).toEqual(["Pending", "In progress", "Waiting", "Finished", "Failed"]);
   });
 
+  it("a_blocked_stage_shows_its_computed_status_and_pending_is_checked_in_the_menu", () => {
+    setup(
+      {
+        ...BASE,
+        stages: [
+          { name: "a", prompt: "p", state: "waiting", message: "review" },
+          { name: "b", prompt: "p", depends_on: ["a"] },
+        ],
+      },
+      "b",
+    );
+    expect(badge()).toHaveTextContent("Waiting for dependencies");
+    fireEvent.click(badge());
+    const group = within(screen.getByRole("group", { name: "Set state" }));
+    expect(group.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Pending",
+      "In progress",
+      "Waiting",
+      "Finished",
+      "Failed",
+    ]);
+    const checked = group.getAllByRole("button").filter((b) => b.querySelector("svg"));
+    expect(checked.map((b) => b.textContent)).toEqual(["Pending"]);
+    choose("Waiting");
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
   it("choosing_finished_sets_the_state_and_clears_the_reason", () => {
     const { stage } = setup(STATES, "b");
     fireEvent.click(badge());

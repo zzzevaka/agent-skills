@@ -18,9 +18,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Stage } from "../domain/types";
+import type { Stage, StageStatus } from "../domain/types";
 import { cn } from "@/lib/utils";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { computeStatuses } from "../domain/status";
 import { StatusDot } from "./AppSidebar";
 import { navigate } from "./route";
 import { announce, resolveDrop, uniqueIds } from "./sortable";
@@ -34,10 +35,11 @@ interface RowProps {
   id: string;
   index: number;
   stage: Stage;
+  status: StageStatus;
   selected: boolean;
 }
 
-function SortableRow({ id, index, stage, selected }: RowProps) {
+function SortableRow({ id, index, stage, status, selected }: RowProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id });
 
@@ -66,7 +68,7 @@ function SortableRow({ id, index, stage, selected }: RowProps) {
         className="pl-6 group-data-[collapsible=icon]:pl-2"
         onClick={() => navigate({ tab: "stages", item: stage.name }, { replace: true })}
       >
-        <StatusDot state={stage.state} />
+        <StatusDot status={status} />
         <span className={cn("flex-1 truncate", hideWhenCollapsed)}>{stage.name}</span>
         <span className={cn("font-mono text-[11px] text-muted-foreground", hideWhenCollapsed)}>
           {String(index + 1).padStart(2, "0")}
@@ -80,6 +82,7 @@ function SortableRow({ id, index, stage, selected }: RowProps) {
 export function SortableStageList({ stages, selected }: { stages: Stage[]; selected: string | null }) {
   const actions = useStageActions();
   const ids = useMemo(() => uniqueIds(stages.map((s) => s.name)), [stages]);
+  const statuses = useMemo(() => computeStatuses(stages), [stages]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -129,6 +132,7 @@ export function SortableStageList({ stages, selected }: { stages: Stage[]; selec
               id={ids[index]}
               index={index}
               stage={stage}
+              status={statuses[index]}
               selected={stage.name === selected}
             />
           ))}
@@ -137,7 +141,7 @@ export function SortableStageList({ stages, selected }: { stages: Stage[]; selec
       <DragOverlay dropAnimation={{ duration: 150 }}>
         {dragged && (
           <div className="flex h-8 items-center gap-2 rounded-md border bg-sidebar px-2 text-sm text-sidebar-foreground shadow-lg">
-            <StatusDot state={dragged.state} />
+            <StatusDot status={statuses[ids.indexOf(activeId as string)]} />
             <span className="truncate">{dragged.name}</span>
           </div>
         )}

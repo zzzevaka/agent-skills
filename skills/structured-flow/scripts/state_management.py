@@ -10,7 +10,7 @@ from lib.exceptions import ValidationError
 
 class Commands(StrEnum):
     GET_FLOW = auto()
-    START_NEXT_STAGE = auto()
+    START_STAGE = auto()
     SET_OUTPUT = auto()
     FINISH_STAGE = auto()
     FAIL_STAGE = auto()
@@ -26,6 +26,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("command", choices=[c.value for c in Commands])
     parser.add_argument("-p", "--path", type=str, required=True, help="path to the flow state file")
     parser.add_argument("-m", "--message", type=str, required=False)
+    parser.add_argument(
+        "-s", "--stage", type=str, required=False, help="name of the stage to start or resume"
+    )
     parser.add_argument(
         "-r", "--revision", type=int, help="revision returned by the latest get_flow"
     )
@@ -53,6 +56,18 @@ def _main() -> None:
         fail(f"-r/--revision is required for the {args.command} command")
 
     params: dict[str, object] = {}
+    if args.stage is not None and args.command not in (
+        Commands.START_STAGE,
+        Commands.RESUME_STAGE,
+    ):
+        fail(
+            "-s/--stage is only valid for start_stage and resume_stage, "
+            f"not {args.command}"
+        )
+    if args.command in (Commands.START_STAGE, Commands.RESUME_STAGE):
+        if args.stage is None:
+            fail(f"-s/--stage is required for the {args.command} command")
+        params = {"name": args.stage}
     if args.command == Commands.SET_OUTPUT:
         if args.message is None:
             fail(f"-m/--message is required for the {args.command} command")
@@ -60,12 +75,12 @@ def _main() -> None:
     elif args.command in (Commands.PAUSE_STAGE, Commands.FAIL_STAGE, Commands.RESUME_STAGE):
         if args.message is None:
             fail(f"-m/--message is required for the {args.command} command")
-        params = {"message": args.message}
+        params = {**params, "message": args.message}
     elif args.command == Commands.FINISH_STAGE and args.message is not None:
         params = {"output": args.message}
     try:
         operation = {
-            Commands.START_NEXT_STAGE: "start_next_stage",
+            Commands.START_STAGE: "start_stage",
             Commands.SET_OUTPUT: "set_output",
             Commands.FINISH_STAGE: "finish_stage",
             Commands.FAIL_STAGE: "fail_stage",

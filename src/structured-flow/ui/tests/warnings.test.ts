@@ -25,26 +25,35 @@ describe("runtimeWarnings", () => {
     });
   });
 
-  it("warns_when_more_than_one_stage_is_active", () => {
+  it("warns_when_more_than_one_stage_is_in_progress", () => {
     const f = flow([
       { name: "a", prompt: "p", state: "inprogress" },
-      { name: "b", prompt: "p", state: "waiting" },
+      { name: "b", prompt: "p", state: "inprogress" },
     ]);
     expect(runtimeWarnings(f)).toContainEqual({
       stage: null,
-      message: "more than one stage is in progress or waiting: 'a', 'b'",
+      message: "more than one stage is in progress: 'a', 'b'",
     });
   });
 
-  it("warns_when_a_pending_stage_precedes_a_finished_one", () => {
+  it("gives_no_warning_for_several_waiting_stages_or_one_in_progress_beside_waiting", () => {
+    expect(
+      runtimeWarnings(
+        flow([
+          { name: "a", prompt: "p", state: "waiting", message: "review" },
+          { name: "b", prompt: "p", state: "waiting", message: "approval" },
+          { name: "c", prompt: "p", state: "inprogress" },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("gives_no_warning_for_a_pending_stage_before_a_finished_one", () => {
     const f = flow([
       { name: "a", prompt: "p", state: "pending" },
       { name: "b", prompt: "p", state: "finished", output: "x" },
     ]);
-    expect(runtimeWarnings(f)).toContainEqual({
-      stage: "a",
-      message: "stage 'a' is pending but the later stage 'b' is finished",
-    });
+    expect(runtimeWarnings(f)).toEqual([]);
   });
 
   it("warns_when_finished_output_does_not_match_its_schema", () => {

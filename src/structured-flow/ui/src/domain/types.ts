@@ -10,6 +10,25 @@ export const STAGE_STATES: readonly StageState[] = [
   "failed",
 ];
 
+/** What a stage looks like to the agent: a stored `pending` stage is split by its dependencies. */
+export type StageStatus =
+  | "ready_to_start"
+  | "waiting_for_dependencies"
+  | "inprogress"
+  | "waiting"
+  | "finished"
+  | "failed";
+
+/** Display order of the statuses (progress bar and legend). */
+export const STAGE_STATUSES: readonly StageStatus[] = [
+  "finished",
+  "inprogress",
+  "waiting",
+  "ready_to_start",
+  "waiting_for_dependencies",
+  "failed",
+];
+
 export interface Stage {
   name: string;
   prompt: string;

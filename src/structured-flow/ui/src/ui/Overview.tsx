@@ -16,7 +16,7 @@ export function Overview({ selected }: { selected: string | null }) {
   const current = stages.find((s) => s.name === selected)?.name ?? null;
   const store = useFlowStoreApi();
   const [fullscreen, setFullscreen] = useState(false);
-  const [direction, setDirection] = useState<Direction>("vertical");
+  const [direction, setDirection] = useState<Direction>("horizontal");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -32,7 +32,8 @@ export function Overview({ selected }: { selected: string | null }) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold tracking-tight">Overview</h2>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_28rem]">
+      {/* A gap, not space-y: a margin would offset the card when it is fixed to the window. */}
+      <div className="flex flex-col gap-6">
         <div className="min-w-0">
           <MarkdownEditor
             ariaLabel="Goal"
@@ -49,9 +50,9 @@ export function Overview({ selected }: { selected: string | null }) {
           data-fullscreen={fullscreen ? "true" : undefined}
           className={cn(
             "flex min-w-0 flex-col",
-            // Pinned and at most 80% of the window, with the graph scrolling inside:
-            // the goal's height never changes the flow's.
-            fullscreen ? "fixed inset-0 z-50 rounded-none border-0" : "max-h-[80svh] lg:sticky lg:top-6 lg:self-start",
+            // Full width below the goal, at most 80% of the window high, with the graph
+            // scrolling inside.
+            fullscreen ? "fixed inset-0 z-50 rounded-none border-0" : "max-h-[80svh]",
           )}
         >
           <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">

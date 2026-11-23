@@ -39,7 +39,9 @@ OpenCode, Pi Agent, and others.
 - **Durable state.** The flow file holds the state of the whole run, so a run
   can stop at any point and resume in another session. A stage can also pause
   on purpose to wait for an outside event, such as a person's approval or a
-  pull request review.
+  pull request review. While it waits, possibly for days, the agent can start
+  any other stage that is ready, and resume the paused stage by name when it
+  is unblocked.
 
 These rules are instructions, not guarantees: the skill relies on the agent
 following them. A harness with an extension API, such as Pi Agent, could
@@ -65,7 +67,7 @@ opencode run "@structured-flow run path/to/flow.yaml"
 ### Run one stage and stop
 
 ```bash
-opencode run "@structured-flow run only next stage and stop path/to/flow.yaml"
+opencode run "@structured-flow run only one ready stage and stop path/to/flow.yaml"
 ```
 
 ### View and edit the flow

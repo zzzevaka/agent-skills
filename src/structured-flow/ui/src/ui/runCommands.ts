@@ -56,6 +56,6 @@ function prompt(harness: HarnessId, request: string): string {
 export function runCommands(harness: Harness, file: string): RunCommand[] {
   return [
     { label: "Run the whole flow", command: prompt(harness.id, `run ${file}`) },
-    { label: "Run one stage and stop", command: prompt(harness.id, `run only next stage and stop ${file}`) },
+    { label: "Run one stage and stop", command: prompt(harness.id, `run only one ready stage and stop ${file}`) },
   ];
 }

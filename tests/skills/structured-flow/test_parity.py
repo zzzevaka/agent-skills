@@ -30,6 +30,9 @@ class FlowParityTests(unittest.TestCase):
     def test_flow_cases_are_current(self):
         self.assertEqual(load("flow-cases.json"), gen.build_flow_cases())
 
+    def test_status_cases_are_current(self):
+        self.assertEqual(load("status-cases.json"), gen.build_status_cases())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -36,8 +36,10 @@ describe("run commands", () => {
     expect(runCommands(codex, "f.yaml")[0].command).toBe("codex '$structured-flow run f.yaml'");
   });
 
-  it("the_second_command_runs_only_the_next_stage", () => {
-    expect(runCommands(opencode, "f.yaml")[1].command).toContain("run only next stage and stop f.yaml");
+  it("the_second_command_runs_only_one_ready_stage", () => {
+    for (const harness of [opencode, claude, codex]) {
+      expect(runCommands(harness, "f.yaml")[1].command).toContain("run only one ready stage and stop f.yaml");
+    }
   });
 
   it("install_targets_the_chosen_agent", () => {
